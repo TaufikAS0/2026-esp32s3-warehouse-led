@@ -5,12 +5,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const source = fs.readFileSync(path.join(__dirname, '../02_Firmware/WarehouseLed/web_ui.h'), 'utf8');
-const html = source.split('R"HTML(')[1].split(')HTML"')[0];
+const version=fs.readFileSync(path.join(__dirname,'../02_Firmware/WarehouseLed/firmware_version.h'),'utf8').match(/#define WAREHOUSE_FIRMWARE_VERSION "([^"]+)"/)[1];
+const html = source.replace(')HTML" WAREHOUSE_FIRMWARE_VERSION R"HTML(',version).split('R"HTML(')[1].split(')HTML"')[0];
 assert.doesNotMatch(html, /â|Ã|Â/, 'UTF-8 labels must not contain mojibake');
 const clone = obj => JSON.parse(JSON.stringify(obj));
 let config = {schema:1, brightness_limit:128, outputs:[3,0,0,0],
   boxes:[{id:'R01-B01',name:'Rak 1 Box 1',output:1,start_led:1,led_count:3}],wifi:{ssid:'',password_configured:false}};
-let states = new Map(), calls = [], poll, failStatus=false, failSave=false;
+let hardwareTests = [], states = new Map(), calls = [], poll, failStatus=false, failSave=false;
 const dom = new JSDOM(html, {url:'http://warehouse-fixture.test/', runScripts:'dangerously', pretendToBeVisual:true,
   beforeParse(window) {
     window.AbortController = global.AbortController;
@@ -18,8 +19,7 @@ const dom = new JSDOM(html, {url:'http://warehouse-fixture.test/', runScripts:'d
     window.fetch = async (url, options) => {
       const payload = options.body ? JSON.parse(options.body) : undefined;
       calls.push({url,method:options.method,payload});
-      if(options.headers.Authorization !== 'Bearer '+ 'a'.repeat(64))
-        return {ok:false,status:401,json:async()=>({error:'invalid token'})};
+      assert.equal(options.headers.Authorization,undefined);
       let result;
       if(url.endsWith('/config') && options.method==='PUT') {
         if(failSave)return {ok:false,status:503,json:async()=>({error:'storage write failed'})};
@@ -35,11 +35,12 @@ const dom = new JSDOM(html, {url:'http://warehouse-fixture.test/', runScripts:'d
         }
         config={...clone(payload),wifi:payload.wifi||config.wifi};config.wifi.password_configured=false;states.clear();result=config;
       } else if(url.endsWith('/config')) result=config;
-      else if(url.endsWith('/status')) {if(failStatus)throw new TypeError('Network disconnected');result={version:'v0.3.2',ip:'fixture',sta_connected:true,ap_active:false,
+      else if(url.endsWith('/status')) {if(failStatus)throw new TypeError('Network disconnected');result={version,ip:'fixture',sta_connected:true,ap_active:false,
         ap_ssid:'Warehouse-fixture',outputs:config.outputs,brightness_limit:config.brightness_limit,
-        ota_remaining_ms:0,storage_error:'',boxes:config.boxes.map(b=>states.get(b.id)||
+        ota_remaining_ms:0,storage_error:'',hardware_tests:hardwareTests,boxes:config.boxes.map(b=>states.get(b.id)||
           {id:b.id,on:false,remaining_ms:0,color:[0,255,0],brightness:128,mode:'steady'})};}
       else if(url.endsWith('/all-off')) {states.clear();result={ok:true};}
+      else if(url.includes('/outputs/') && url.endsWith('/test')) {const output=Number(url.split('/').at(-2));result={output,on:payload.on,remaining_ms:payload.on?payload.duration_ms:0,brightness:Math.min(payload.brightness,config.brightness_limit)};hardwareTests=[result];}
       else if(url.endsWith('/state')) {
         const id=url.split('/').at(-2);result={...payload,id,remaining_ms:payload.on?payload.duration_ms:0,
           brightness:Math.min(payload.brightness||128,config.brightness_limit)};
@@ -53,12 +54,13 @@ const document=dom.window.document, $=id=>document.getElementById(id);
 const settle=async()=>{for(let i=0;i<6;i++)await new Promise(resolve=>setImmediate(resolve));};
 async function click(id){$(id).click();await settle();}
 async function main(){
-  $('token').value='b'.repeat(64);await click('connect');assert.match($('message').textContent,/401/);
-  $('token').value='a'.repeat(64);await click('connect');
+  assert.equal($('version').textContent,'Firmware '+version);
+  await settle();assert.equal(document.querySelector('#token'),null);
   assert.equal($('mapping').children.length,1);assert.equal($('box-grid').children.length,4);
   assert.equal(document.querySelectorAll('.box').length,100);
   assert.equal(document.querySelectorAll('.box.placeholder:disabled').length,0);
   assert.equal($('turn-on').disabled,true);
+  assert.equal($('rack-test-red-2').disabled,true);await click('rack-test-red-1');assert.equal(hardwareTests[0].output,1);assert.equal(hardwareTests[0].remaining_ms,3000);assert.match($('rack-test-state-1').textContent,/Tes hardware/);await click('rack-test-off-1');assert.equal(hardwareTests[0].on,false);
   document.querySelector('[data-box-id="R01-B02"]').click();await settle();
   assert.equal($('selected-id').textContent,'R01-B02');assert.equal($('box-start').value,'4');
   assert.equal($('turn-on').disabled,true);
@@ -123,8 +125,7 @@ async function main(){
   $('search').value='';$('search').dispatchEvent(new dom.window.Event('input'));
   $('rack-filter').value='1';$('rack-filter').dispatchEvent(new dom.window.Event('change'));
   assert.equal(document.querySelectorAll('.rack:not([hidden])').length,1);
-  await click('logout');assert.equal(dom.window.sessionStorage.length,0);assert.equal($('box-grid').children.length,0);
-  const n=calls.length;await poll();assert.equal(calls.length,n);
-  dom.window.close();console.log('UI DOM tests passed: auth, four racks/100 slots, selection, manual RGB/blink, stale status, mapping draft/save, limits, logout');
+  assert.equal(dom.window.sessionStorage.length,0);
+  dom.window.close();console.log('UI DOM tests passed: open LAN auto-load, four racks/100 slots, selection, manual RGB/blink, stale status, mapping draft/save, limits');
 }
 main().catch(error=>{console.error(error);dom.window.close();process.exitCode=1;});

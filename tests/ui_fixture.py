@@ -1,16 +1,19 @@
 """Loopback-only UI fixture. This is NOT the ESP32 WebServer runtime."""
 import json
+import re
 from pathlib import Path
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 TOKEN = 'a' * 64  # Synthetic fixture token only.
 ROOT = Path(__file__).parents[1]
-HTML = (ROOT / '02_Firmware/WarehouseLed/web_ui.h').read_text(encoding='utf-8').split('R"HTML(', 1)[1].split(')HTML"', 1)[0]
+VERSION = re.search(r'#define WAREHOUSE_FIRMWARE_VERSION "([^"]+)"', (ROOT / '02_Firmware/WarehouseLed/firmware_version.h').read_text()).group(1)
+HTML = (ROOT / '02_Firmware/WarehouseLed/web_ui.h').read_text(encoding='utf-8').replace(')HTML" WAREHOUSE_FIRMWARE_VERSION R"HTML(', VERSION).split('R"HTML(', 1)[1].split(')HTML"', 1)[0]
 CONFIG = {'schema': 1, 'brightness_limit': 128, 'outputs': [3, 0, 0, 0],
           'boxes': [{'id': 'R01-B01', 'name': 'Rak 1 Box 1', 'output': 1, 'start_led': 1, 'led_count': 3}],
           'wifi': {'ssid': '', 'password_configured': False}}
 STATES = {}
+HARDWARE_TESTS = {}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -33,8 +36,6 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'text/html; charset=utf-8')
             self.send_header('Content-Length', str(len(raw)))
             self.end_headers(); self.wfile.write(raw); return
-        if self.headers.get('Authorization') != 'Bearer ' + TOKEN:
-            return self.reply({'error': 'invalid token'}, 401)
         body_length = int(self.headers.get('Content-Length', 0))
         body = json.loads(self.rfile.read(body_length)) if body_length else {}
         if self.path == '/api/v1/config' and self.command == 'PUT':
@@ -53,11 +54,30 @@ class Handler(BaseHTTPRequestHandler):
             CONFIG['wifi'].pop('password', None)
             CONFIG['wifi']['password_configured'] = False
             STATES.clear()
+            HARDWARE_TESTS.clear()
             return self.reply(CONFIG)
         if self.path in ('/api/v1/config', '/api/v1/boxes'):
             return self.reply(CONFIG)
         if self.path == '/api/v1/all-off':
-            STATES.clear(); return self.reply({'ok': True})
+            STATES.clear(); HARDWARE_TESTS.clear(); return self.reply({'ok': True})
+        if self.path.startswith('/api/v1/outputs/') and self.path.endswith('/test'):
+            output = int(self.path.split('/')[-2])
+            if output not in range(1, 5):
+                return self.reply({'error': 'output not found'}, 404)
+            if body['on'] and not CONFIG['outputs'][output - 1]:
+                return self.reply({'error': 'output has no installed LEDs'}, 400)
+            duration = body.get('duration_ms', 3000)
+            if not 1000 <= duration <= 30000:
+                return self.reply({'error': 'invalid duration'}, 400)
+            for box in CONFIG['boxes']:
+                if box['output'] == output:
+                    STATES.pop(box['id'], None)
+            state = {'output': output, 'on': body['on'], 'remaining_ms': duration if body['on'] else 0,
+                     'brightness': min(body.get('brightness', 128), CONFIG['brightness_limit']),
+                     'color': body.get('color', [0, 255, 0]), 'mode': body.get('mode', 'steady'),
+                     'led_count': CONFIG['outputs'][output - 1]}
+            HARDWARE_TESTS[output] = dict(state, deadline=time.monotonic() + duration / 1000)
+            return self.reply(state)
         if self.path.startswith('/api/v1/boxes/') and self.path.endswith('/state'):
             box_id = self.path.split('/')[-2]
             if box_id not in {b['id'] for b in CONFIG['boxes']}:
@@ -66,6 +86,8 @@ class Handler(BaseHTTPRequestHandler):
                      'brightness': min(body.get('brightness', 128), CONFIG['brightness_limit']),
                      'mode': body.get('mode', 'steady'), 'remaining_ms': body.get('duration_ms', 60000)}
             STATES[box_id] = dict(state, deadline=time.monotonic() + state['remaining_ms'] / 1000)
+            output = next(box['output'] for box in CONFIG['boxes'] if box['id'] == box_id)
+            HARDWARE_TESTS.pop(output, None)
             return self.reply(state)
         if self.path == '/api/v1/status':
             states = []
@@ -75,7 +97,11 @@ class Handler(BaseHTTPRequestHandler):
                     s['remaining_ms'] = max(0, int((s.pop('deadline') - time.monotonic()) * 1000))
                     s['on'] = s['on'] and s['remaining_ms'] > 0
                 states.append(s)
-            return self.reply({'version': 'v0.4.0 [UI fixture]', 'ip': '127.0.0.1', 'sta_connected': True,
+            tests = []
+            for output, data in HARDWARE_TESTS.items():
+                test = dict(data); test['remaining_ms'] = max(0, int((test.pop('deadline') - time.monotonic()) * 1000))
+                test['on'] = test['on'] and test['remaining_ms'] > 0; tests.append(test)
+            return self.reply({'version': VERSION + ' [UI fixture]', 'hardware_tests': tests, 'ip': '127.0.0.1', 'sta_connected': True,
                                'ap_active': False, 'ap_ssid': 'Warehouse-FIXTURE', 'outputs': CONFIG['outputs'],
                                'brightness_limit': CONFIG['brightness_limit'], 'ota_remaining_ms': 0,
                                'led_driver_ready': True, 'storage_error': '', 'boxes': states})

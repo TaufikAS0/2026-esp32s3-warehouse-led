@@ -1,11 +1,12 @@
 # HTTP API v1
 
-Base URL: `http://<IP-controller>/api/v1`. Semua request API memakai `Authorization: Bearer <token-dari-USB>`. JSON mutation memakai `Content-Type: application/json`. Body maksimal 32768 byte. Secret tidak berada di URL. Tidak ada endpoint untuk membaca token/password.
+Base URL: `http://<IP-controller>/api/v1`. Mulai v0.5.0, web dan HTTP API terbuka tanpa token sesuai instruksi pengguna. Header Authorization tidak diperlukan. JSON mutation memakai `Content-Type: application/json`. Body maksimal 32768 byte. Password OTA/router tidak berada di URL. Tidak ada endpoint untuk membaca token/password.
 
 | Method | Path | Perilaku |
 |---|---|---|
 | GET | `/status` | Versi, koneksi, IP, jumlah LED/output, kondisi driver/storage, timer OTA, state tiap box |
 | GET | `/boxes` | Schema, batas brightness, outputs, daftar ID/nama/mapping |
+| PUT | `/outputs/{1..4}/test` | Tes seluruh LED terpasang pada rak; payload state, default3 detik, maksimal30 detik; menghentikan box aktif pada rak itu |
 | PUT | `/boxes/{id}/state` | Perintah satu box, respons state efektif |
 | POST | `/all-off` | Padamkan semua, respons `{"ok":true}` |
 | GET | `/config` | Mapping + SSID dan password_configured, tanpa password |
@@ -48,9 +49,9 @@ Satu operasi Simpan menulis keseluruhan mapping/jaringan. Gagal validasi/tulis t
 
 ## Error dan JARVIS
 
-Error JSON `{"error":"pesan"}`: 400 input salah, 401 token salah/belum provision, 404 ID/path tidak ditemukan, 405 method salah, 409 OTA tanpa STA, 413 body terlalu besar, 415 content type salah, 503 alokasi/driver/storage gagal.
+Error JSON `{"error":"pesan"}`: 400 input salah, 404 ID/path tidak ditemukan, 405 method salah, 409 OTA tanpa STA, 413 body terlalu besar, 415 content type salah, 503 alokasi/driver/storage gagal.
 
-Client Python stdlib, tidak membutuhkan pip. Isi `WAREHOUSE_LED_URL` dan `WAREHOUSE_LED_TOKEN` secara lokal, lalu:
+Client Python stdlib, tidak membutuhkan pip. Isi `WAREHOUSE_LED_URL` secara lokal, lalu:
 
 ```powershell
 python scripts/warehouse_client.py boxes
@@ -60,6 +61,8 @@ python scripts/warehouse_client.py all-off
 python scripts/warehouse_client.py status
 ```
 
-Di kode JARVIS, import WarehouseClient dan panggil set_box. Token dibaca dari environment/private credential store. Jangan menyimpan token dalam prompt, log, repo, atau URL. JARVIS mengelola relasi barang→ID box; jika barang ambigu, minta lokasi yang benar, jangan menyalakan tebakan.
+Di kode JARVIS, import WarehouseClient dan panggil set_box. Tidak ada token API. Password OTA tetap disimpan privat. JARVIS mengelola relasi barang→ID box; jika barang ambigu, minta lokasi yang benar, jangan menyalakan tebakan.
 
 Client memiliki timeout5 detik dan tidak mengikuti redirect. Kegagalan transport setelah write menghasilkan AmbiguousResult: hasil belum diketahui. Jangan retry otomatis; panggil status dan periksa box. Ini tidak memberikan exactly-once delivery.
+
+Status mencakup `hardware_tests` untuk empat output: output, on, remaining_ms, brightness, mode, color. Tes hardware tidak menulis flash. Perintah box baru membatalkan tes pada output box tersebut. All-off, simpan konfigurasi, reboot dan aktivasi OTA menghentikan tes.

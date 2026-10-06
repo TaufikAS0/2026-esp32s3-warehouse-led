@@ -12,10 +12,6 @@ void WebService::send(int code, const JsonDocument& doc) {
   server_.sendHeader("Cache-Control", "no-store");
   server_.send(code, "application/json", raw);
 }
-bool WebService::authorize() {
-  if (Codec::authenticated(server_.header("Authorization"), store_.token()) && store_.ready()) return true;
-  error(401, "invalid token or device not provisioned"); return false;
-}
 bool WebService::body(JsonDocument& doc) {
   if (!server_.header("Content-Type").startsWith("application/json")) { error(415, "application/json required"); return false; }
   const String& raw = server_.arg("plain");
@@ -43,6 +39,15 @@ void WebService::status() {
   doc["brightness_limit"] = controller_.config().brightnessLimit;
   auto outputs = doc["outputs"].to<JsonArray>();
   for (auto count : controller_.config().ledCounts) outputs.add(count);
+  auto tests = doc["hardware_tests"].to<JsonArray>();
+  for (size_t o = 0; o < Warehouse::kOutputs; ++o) {
+    const auto& s = leds_.hardwareTests().state(o);
+    auto test = tests.add<JsonObject>();
+    test["output"] = o + 1; test["remaining_ms"] = leds_.hardwareTests().remaining(o, now);
+    test["on"] = leds_.hardwareTests().remaining(o, now) > 0;
+    test["brightness"] = s.brightness; test["mode"] = s.blink ? "blink" : "steady";
+    auto color = test["color"].to<JsonArray>(); for (auto channel : s.color) color.add(channel);
+  }
   auto list = doc["boxes"].to<JsonArray>();
   for (size_t i = 0; i < controller_.config().boxCount; ++i) state(list.add<JsonObject>(), i, now);
   send(200, doc);
@@ -91,7 +96,32 @@ void WebService::putConfig() {
   getConfig();
 }
 void WebService::routeUnknown() {
-  if (!authorize()) return;
+  const String outputPrefix = "/api/v1/outputs/", testSuffix = "/test";
+  const String path = server_.uri();
+  if (path.startsWith(outputPrefix) && path.endsWith(testSuffix)) {
+    if (server_.method() != HTTP_PUT) { error(405, "PUT required"); return; }
+    const String id = path.substring(outputPrefix.length(), path.length() - testSuffix.length());
+    if (id.length() != 1 || id[0] < '1' || id[0] > '4') { error(404, "output not found"); return; }
+    const size_t o = id[0] - '1';
+    JsonDocument doc; if (!body(doc)) return;
+    Warehouse::Command command; command.durationMs = 3000; String e;
+    // Codec supplies the standard 60-second default; hardware tests use 3 seconds.
+    if (!Codec::decodeCommand(doc.as<JsonVariantConst>(), command, e)) { error(400, e); return; }
+    if (doc["duration_ms"].isUnbound()) command.durationMs = 3000;
+    if (command.durationMs > 30000) { error(400, "hardware test maximum 30000 ms"); return; }
+    if (command.on && !controller_.config().ledCounts[o]) { error(400, "output has no installed LEDs"); return; }
+    if (!leds_.ready()) { error(503, "LED driver unavailable"); return; }
+    const uint32_t now = millis(); Warehouse::Command off;
+    for (size_t i = 0; i < controller_.config().boxCount; ++i)
+      if (controller_.config().boxes[i].output == o) controller_.set(i, off, now);
+    leds_.hardwareTests().set(o, command, controller_.config(), now);
+    leds_.update(controller_, now);
+    JsonDocument result; result["output"] = o + 1;
+    result["on"] = leds_.hardwareTests().remaining(o, now) > 0;
+    result["remaining_ms"] = leds_.hardwareTests().remaining(o, now);
+    result["brightness"] = leds_.hardwareTests().state(o).brightness;
+    result["led_count"] = controller_.config().ledCounts[o]; send(200, result); return;
+  }
   const String prefix = "/api/v1/boxes/", suffix = "/state";
   const String uri = server_.uri();
   if (uri.startsWith(prefix) && uri.endsWith(suffix)) {
@@ -104,6 +134,7 @@ void WebService::routeUnknown() {
     if (!Codec::decodeCommand(doc.as<JsonVariantConst>(), command, e)) { error(400, e); return; }
     if (!leds_.ready()) { error(503, "LED driver unavailable"); return; }
     const uint32_t now = millis();
+    leds_.hardwareTests().cancel(controller_.config().boxes[i].output);
     controller_.set(i, command, now); controller_.update(now); leds_.update(controller_, now);
     JsonDocument response; state(response.to<JsonObject>(), i, now); send(200, response);
     return;
@@ -113,24 +144,22 @@ void WebService::routeUnknown() {
   else error(404, "endpoint not found");
 }
 void WebService::begin() {
-  const char* headers[] = {"Authorization", "Content-Type"}; server_.collectHeaders(headers, 2);
+  const char* headers[] = {"Content-Type"}; server_.collectHeaders(headers, 1);
   server_.on("/", HTTP_GET, [this] {
     server_.sendHeader("Cache-Control", "no-store");
     server_.sendHeader("X-Content-Type-Options", "nosniff");
     server_.sendHeader("Content-Security-Policy", "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'");
     server_.send_P(200, "text/html; charset=utf-8", kWebUi);
   });
-  server_.on("/api/v1/status", HTTP_GET, [this] { if (authorize()) status(); });
-  server_.on("/api/v1/boxes", HTTP_GET, [this] { if (authorize()) boxes(); });
-  server_.on("/api/v1/config", HTTP_GET, [this] { if (authorize()) getConfig(); });
-  server_.on("/api/v1/config", HTTP_PUT, [this] { if (authorize()) putConfig(); });
+  server_.on("/api/v1/status", HTTP_GET, [this] { status(); });
+  server_.on("/api/v1/boxes", HTTP_GET, [this] { boxes(); });
+  server_.on("/api/v1/config", HTTP_GET, [this] { getConfig(); });
+  server_.on("/api/v1/config", HTTP_PUT, [this] { putConfig(); });
   server_.on("/api/v1/all-off", HTTP_POST, [this] {
-    if (!authorize()) return;
-    controller_.allOff(); leds_.off(); JsonDocument doc; doc["ok"] = true; send(200, doc);
+      controller_.allOff(); leds_.off(); JsonDocument doc; doc["ok"] = true; send(200, doc);
   });
   server_.on("/api/v1/ota", HTTP_POST, [this] {
-    if (!authorize()) return;
-    JsonDocument doc; if (!body(doc)) return;
+      JsonDocument doc; if (!body(doc)) return;
     if (!doc["enabled"].is<bool>()) { error(400, "enabled must be boolean"); return; }
     if (doc["enabled"].as<bool>()) {
       if (!wifi_.sta()) { error(409, "OTA requires STA connection"); return; }

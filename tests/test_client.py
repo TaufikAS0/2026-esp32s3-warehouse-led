@@ -59,12 +59,12 @@ class ClientTests(unittest.TestCase):
     def setUp(self):
         self.server.calls, self.server.response = [], {'ok': True}
         self.server.code, self.server.sleep, self.server.drop = 200, 0, False
-        self.client = client_module.WarehouseClient(f'http://127.0.0.1:{self.server.server_port}', TOKEN, timeout=.15)
+        self.client = client_module.WarehouseClient(f'http://127.0.0.1:{self.server.server_port}', timeout=.15)
 
     def test_command_contract(self):
         self.client.set_box('R04-B25', color=[255, 0, 0], mode='blink')
         method, path, data, auth = self.server.calls[0]
-        self.assertEqual((method, path, auth), ('PUT', '/api/v1/boxes/R04-B25/state', 'Bearer ' + TOKEN))
+        self.assertEqual((method, path, auth), ('PUT', '/api/v1/boxes/R04-B25/state', None))
         self.assertEqual(data['duration_ms'], 60000)
         self.assertEqual(data['color'], [255, 0, 0])
 
@@ -76,9 +76,9 @@ class ClientTests(unittest.TestCase):
         self.client.status(); self.client.boxes(); self.client.all_off()
         self.assertEqual([x[0:2] for x in self.server.calls], [('GET', '/api/v1/status'), ('GET', '/api/v1/boxes'), ('POST', '/api/v1/all-off')])
 
-    def test_auth_error(self):
-        self.server.code, self.server.response = 401, {'error': 'invalid token'}
-        with self.assertRaisesRegex(client_module.ControllerError, '401'):
+    def test_http_error(self):
+        self.server.code, self.server.response = 503, {'error': 'storage unavailable'}
+        with self.assertRaisesRegex(client_module.ControllerError, '503'):
             self.client.status()
 
     def test_unknown_box(self):
@@ -118,12 +118,11 @@ class ClientTests(unittest.TestCase):
             self.client.status()
         self.assertEqual(len(self.server.calls), 1)
 
-    def test_bad_origin_and_token(self):
+    def test_bad_origin_without_token(self):
         for origin in ('ftp://host', 'http://user:pass@host', 'http://host/api', 'http://host?x=1', ''):
             with self.assertRaises(ValueError):
                 client_module.WarehouseClient(origin, TOKEN)
-        with self.assertRaises(ValueError):
-            client_module.WarehouseClient('http://host', '')
+        client_module.WarehouseClient('http://host')
 
 
 if __name__ == '__main__':

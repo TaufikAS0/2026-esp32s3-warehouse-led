@@ -1,5 +1,16 @@
 # Laporan verifikasi
 
+## v0.5.0 — akses terbuka dan tes hardware rak, 2026-10-06
+
+- Instruksi pengguna mengubah web/HTTP API menjadi akses LAN tanpa token. Mapping/status dimuat otomatis, dan versi firmware dirangkai pada HTML langsung dari satu macro firmware_version.h. Token browser lama dibuang.
+- Empat panel rak mempunyai tes merah/hijau/biru/putih/custom/kedip, brightness per tes, durasi3 detik, dan Padam. Mengikuti jumlah LED terpasang; output0 LED tidak dapat dites. API mengizinkan1–30 detik, default3 detik. Seluruh tes hanya di RAM.
+- Tes hardware menghentikan box aktif pada rak terkait; tes tidak menyalakan kembali box setelah expiry. Perintah box membatalkan tes output itu. All-off/config/OTA/boot membersihkan tes.
+- Host tests domain/codec,11 Python tests dan HTML/JS DOM lulus. Kasus hardware: range3/75 LED, tail padam, batas brightness, blink, expiry, rollover uint32, pembatalan output, clear; UI otomatis membaca tanpa Authorization dan tombol rak0 LED dinonaktifkan.
+- Compile S3 UART/CH340 core3.3.10 lulus: flash1053445/1310720 byte (80%), RAM61180/327680 byte (18%). Peringatan missing-field-initializers berasal dari header dependency core/USB/hal.
+- Authenticated OTA v0.5.0 lulus; reboot kembali STA, mapping/Wi-Fi tetap tersimpan, seluruh LED padam, OTA tertutup. Root HTML cocok dengan source termasuk versi yang dirangkai saat compile.
+- HTTP tanpa Authorization lulus: status/config, tes3 LED sesuai jumlah terpasang, brightness200 dibatasi128, warna/kedip, expiry3 detik, perintah box membatalkan tes, all-off, penolakan rak0 LED/durasi>30 detik/output5. Konfigurasi tidak berubah.
+- Chrome perangkat nyata: auto-load tanpa token, label Firmware v0.5.0, klik B02 membuka editor, klik B01 dan Simpan box lulus, tombol tes hardware hijau/biru rak1 mengirim LED1–3 pada brightness32 selama3 detik. Konfirmasi optik LED dan pengujian75/300 LED tetap terpisah.
+
 ## v0.4.0 — editor box langsung, 2026-10-06
 
 - Semua 100 slot awal dapat dipilih, termasuk box belum dikonfigurasi. Editor per box menyediakan ID, nama, rak/output, LED awal, jumlah LED box dan jumlah LED terpasang. Tes hanya tersedia untuk mapping tersimpan.

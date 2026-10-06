@@ -10,3 +10,5 @@
 - Run domain tests, Python tests and ESP32-S3 compile before a feature is accepted.
 - Report software verification separately from physical LED/electrical verification.
 - Do not automatically flash hardware or change existing projects.
+
+- User-approved v0.5.0 behavior: LAN web and HTTP API are open, without bearer/login. Do not reintroduce API authentication unless requested. OTA upload password remains required. Firmware version must be visible before API connection.

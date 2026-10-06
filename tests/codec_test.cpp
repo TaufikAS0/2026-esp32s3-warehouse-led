@@ -44,11 +44,5 @@ int main() {
     "{\"on\":true,\"brightness\":true}", "{\"on\":true,\"mode\":\"random\"}",
     "{\"on\":true,\"duration_ms\":999}", "{\"on\":true,\"duration_ms\":3600001}",
     "{\"on\":true,\"duration_ms\":null}"}) assert(!command(raw));
-  const String token(64, 'a');
-  assert(Codec::authenticated(String("Bearer ") + token, token));
-  assert(!Codec::authenticated(String("bearer ") + token, token));
-  assert(!Codec::authenticated(String("Bearer ") + String(64, 'b'), token));
-  assert(!Codec::authenticated("", ""));
-  assert(!Codec::authenticated(String("Bearer ") + token + "x", token));
-  std::cout << "Codec tests passed: real JSON parsing, numeric bounds, config roundtrip, bearer auth\n";
+  std::cout << "Codec tests passed: real JSON parsing, numeric bounds, config roundtrip\n";
 }

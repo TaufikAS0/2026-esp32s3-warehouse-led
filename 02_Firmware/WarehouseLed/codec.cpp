@@ -80,11 +80,3 @@ bool Codec::decodeCommand(JsonVariantConst root, Warehouse::Command& out, String
   }
   return true;
 }
-bool Codec::authenticated(const String& header, const String& token) {
-  if (token.length() != 64 || header.length() != token.length() + 7) return false;
-  uint8_t difference = 0;
-  const char prefix[] = "Bearer ";
-  for (size_t i = 0; i < 7; ++i) difference |= header[i] ^ prefix[i];
-  for (size_t i = 0; i < token.length(); ++i) difference |= header[i + 7] ^ token[i];
-  return difference == 0;
-}

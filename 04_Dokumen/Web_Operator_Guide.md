@@ -6,8 +6,14 @@ Dashboard memakai warna slate/cyan, empat panel rak dengan25 posisi per rak, dan
 
 1. Hubungkan controller ke router melalui Konfigurasi. SSID/password tersimpan di NVS dan dipakai otomatis setelah boot. Jangan memasukkan kredensial router ke source.
 2. Buka alamat IP controller. IP dapat dibaca melalui USB115200 dengan perintah `info`.
-3. Tempel token API dari perintah USB `credentials`, lalu tekan Hubungkan. Password AP `12345678` berbeda dari token API dan password OTA.
-4. Token disimpan dalam sessionStorage tab. Tombol Lupakan token menghapusnya. Koneksi putus menandai status sebagai data terakhir dan menonaktifkan kontrol nyala sampai status berhasil dibaca lagi.
+3. Mapping dimuat otomatis tanpa login/token. Versi firmware terlihat pada header bahkan sebelum koneksi API selesai. Muat ulang koneksi mengulangi pembacaan controller.
+4. Koneksi putus menandai status sebagai data terakhir dan menonaktifkan perintah nyala sampai status berhasil dibaca lagi.
+
+## Tes hardware per rak
+
+Di bawah grid setiap rak, isi brightness tes (default32), pilih warna custom atau tekan Merah/Hijau/Biru/Putih/Kedip. Seluruh LED1 sampai jumlah LED terpasang pada rak tersebut menyala selama3 detik, termasuk LED yang belum dipetakan ke box. Rak dengan jumlah LED0 menonaktifkan tes; isi jumlah terpasang di Konfigurasi lalu Simpan dahulu. Jumlah ini adalah pengaturan manual, bukan hasil autodetection.
+
+Tes menghentikan box aktif pada rak yang diuji; rak lain tetap berjalan. Padam pada panel rak, Padamkan semua, simpan konfigurasi dan aktivasi OTA menghentikan tes. Nyala layar/status API menunjukkan perintah firmware, bukan konfirmasi optik. Tes tidak menulis flash.
 
 ## Tes awal tiga LED
 

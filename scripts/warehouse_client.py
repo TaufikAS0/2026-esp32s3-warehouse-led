@@ -1,4 +1,4 @@
-"""JARVIS-ready stdlib client. Credentials are supplied through environment variables."""
+"""JARVIS-ready stdlib client. Open LAN API; set the controller URL through environment variables."""
 import argparse
 import http.client
 import json
@@ -20,17 +20,16 @@ class AmbiguousResult(ControllerError):
 
 
 class WarehouseClient:
-    def __init__(self, base_url, token, timeout=5):
+    def __init__(self, base_url, token=None, timeout=5):
         parsed = urllib.parse.urlsplit(base_url)
         if parsed.scheme not in ('http', 'https') or not parsed.netloc or parsed.username or parsed.password or parsed.query or parsed.fragment:
             raise ValueError('Use an HTTP(S) controller URL without credentials/query/fragment')
         if parsed.path not in ('', '/'):
             raise ValueError('URL must be controller origin, without an API path')
-        if not re.fullmatch(r'[a-f0-9]{64}', token):
-            raise ValueError('Token must be 64 lowercase hex characters from USB')
         if timeout <= 0:
             raise ValueError('timeout must be positive')
-        self.base_url, self.token, self.timeout = base_url.rstrip('/'), token, timeout
+        # The optional legacy token argument is accepted for existing callers, but not sent.
+        self.base_url, self.timeout = base_url.rstrip('/'), timeout
         # Do not send LAN credentials through machine proxy settings or follow redirects.
         class NoRedirect(urllib.request.HTTPRedirectHandler):
             def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -39,7 +38,7 @@ class WarehouseClient:
 
     def _request(self, path, method='GET', data=None):
         body = None if data is None else json.dumps(data).encode('utf-8')
-        headers = {'Authorization': 'Bearer ' + self.token}
+        headers = {}
         if body is not None:
             headers['Content-Type'] = 'application/json'
         request = urllib.request.Request(self.base_url + '/api/v1' + path, data=body, headers=headers, method=method)
@@ -93,7 +92,7 @@ def main():
     parser.add_argument('--color', nargs=3, type=int, default=[0, 255, 0], metavar=('R', 'G', 'B'))
     args = parser.parse_args()
     try:
-        client = WarehouseClient(os.environ.get('WAREHOUSE_LED_URL', ''), os.environ.get('WAREHOUSE_LED_TOKEN', ''))
+        client = WarehouseClient(os.environ.get('WAREHOUSE_LED_URL', ''))
         if args.action in ('on', 'off'):
             if not args.box_id:
                 parser.error('box_id required for on/off')

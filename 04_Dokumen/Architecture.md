@@ -16,7 +16,9 @@ Partition table sketch mempertahankan dua slot OTA1280 KiB dan memindahkan NVS k
 
 Controller memakai catu tetap; modem sleep dimatikan untuk mengurangi jeda HTTP/OTA. Ini pilihan latency dibanding idle power, bukan jaminan bebas gangguan router. ArduinoOTA menggunakan toleransi jeda10 detik dan log start/end/error. Transfer tetap sinkron pada maintenance window, sehingga web dapat berhenti merespons sementara.
 
-`web_service.*` memeriksa bearer untuk semua endpoint API. Halaman `/` adalah shell publik tanpa data sensitif; token diisi manual dan disimpan di sessionStorage tab. Tidak ada CORS publik, CDN, atau password pada GET config. HTTP/token digunakan di LAN tepercaya; ini bukan transport terenkripsi. Client menonaktifkan proxy mesin dan redirect agar bearer tidak ikut ke host lain.
+`web_service.*` membuka seluruh HTTP API tanpa autentikasi sesuai keputusan pengguna pada v0.5.0. Web otomatis membaca mapping/status; tidak menyimpan token browser. Tidak ada CORS publik atau CDN. GET config tidak mengembalikan password. Versi pada HTML dirangkai saat compile dari macro yang sama dengan Firmware::kVersion, sehingga tetap terlihat tanpa login/API.
+
+`hardware_test.h` menyimpan state tes per output tanpa flash, timer uint32 tahan rollover, brightness dibatasi global dan render mengikuti ledCounts. Driver menerapkan frame tes sesudah render box. API tes memadamkan state box pada rak itu sehingga tidak menyala kembali setelah expiry. Perintah box membatalkan tes output terkait; off/config/OTA menghapus seluruh tes.
 
 `ota_service.*` mati setelah boot, hanya STA, autentikasi password unik, jendela 10 menit. Putus STA menutup OTA. Mengaktifkan OTA memadamkan LED. Transfer OTA adalah pemeliharaan, bukan operasi gudang normal; reboot tetap memadamkan state box.
 

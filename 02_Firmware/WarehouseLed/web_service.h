@@ -17,7 +17,6 @@ class WebService {
   LedDriver& leds_;
   WifiService& wifi_;
   OtaService& ota_;
-  bool authorize();
   bool body(JsonDocument& doc);
   void error(int code, const String& message);
   void send(int code, const JsonDocument& doc);
