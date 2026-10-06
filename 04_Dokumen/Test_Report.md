@@ -1,4 +1,35 @@
-# Laporan verifikasi v0.1.0
+# Laporan verifikasi
+
+## Update v0.3.2 — 2026-10-06
+
+| Pemeriksaan | Hasil dan batas bukti |
+|---|---|
+| Dashboard | Empat rak ×25 slot, pemilihan box, warna/timer, kontrol manual RGB/kedip3 detik, filter, generator LED/box, preset setup awal dan per-alamat, draft/save serta validasi lokal. Semua HTML/CSS/JS embedded, tanpa CDN |
+| Host tests | Domain/codec lulus,11 test Python lulus, UI DOM lulus termasuk100 box, RGB/blink, selection stabil saat polling, status stale, batas generator, preset tiap LED dan UTF-8 |
+| Compile | Arduino-ESP32 3.3.10, ArduinoJson 7.4.2, NeoPixel1.15.2; S3 UART/CH340,4MB, PSRAM off, CDC disabled. Flash1045069/1310720 byte (79%), RAM statis61116/327680 byte (18%) |
+| USB upload | COM10,460800 baud, hash terverifikasi. Mapping/token/AP/OTA tetap tersimpan |
+| Wi-Fi fisik | Konfigurasi router disimpan melalui authenticated API, tersambung STA dan menutup AP; kembali ke router setelah USB reboot dan OTA reboot. Kredensial/IP tidak dimasukkan source |
+| HTTP ESP32 asli | Bearer benar/salah,401/400/404, konfigurasi/status, perintah RGB satu box dan expiry1 detik. Respons firmware terverifikasi; nyala optik LED belum dikonfirmasi |
+| Web perangkat asli | Dibuka di browser pada LAN; v0.3.2,1 box/3 LED, konfigurasi router tersimpan, pemilihan R01-B01, tes hijau brightness32 dan padam sukses. Halaman yang disajikan cocok byte-per-byte dengan source |
+| Responsive | Desktop1440px dan mobile390px teramati; mobile tidak overflow horizontal, satu rak awal dan kontrol terpilih dapat diakses. Peta100 box diuji pada fixture, bukan konfigurasi100 box fisik |
+| OTA autentikasi | Password salah ditolak. Transfer aplikasi dengan password benar berhasil setelah penyesuaian jaringan/timeout; log USB start/end dan reboot teramati |
+| OTA reboot | v0.3.2 kembali ke STA, OTA tertutup, box padam, mapping dan Wi-Fi tetap. Jendela10 menit, recovery saat putus router, interruption/power-loss dan endurance belum divalidasi penuh |
+
+Percobaan OTA awal pada v0.3.0 gagal di tengah transfer melalui adapter pertama; firmware lama tetap berjalan. Percobaan dengan bind adapter lain mendapat no-response akibat koneksi balik menuju IP sumber undangan UDP. Baseline v0.3.2 menambah toleransi jeda data10 detik, log start/end/error dan mematikan Wi-Fi power save. Transfer ulang memakai listener0.0.0.0 berhasil. Ini bukti satu transfer LAN yang sukses, bukan jaminan terhadap seluruh kondisi router.
+
+Firmware/dashboard sesuai cakupan planning software. Acceptance75/300 LED, hasil optik/RMT empat output, pengukuran daya/suhu dan8 jam masih **belum dilakukan**. Tidak ada perubahan source JARVIS aktif. Bukti/log/binary dan screenshot lokal tersimpan di `_sandbox` dan diabaikan Git.
+
+## Update v0.2.0 — 2026-10-06
+
+- Default AP internal `12345678` atas instruksi pengguna; perintah USB `ap-password` untuk perangkat yang sudah provisioned. Token API dan OTA tetap terpisah.
+- Compile target ESP32-S3 UART/CH340, core3.3.10, flash4MB, PSRAM off, CDCOnBoot disabled: lulus. Flash1026237/1310720 byte, RAM statis61116/327680 byte.
+- Domain, codec, 11 test Python, dan UI DOM: seluruhnya lulus ulang.
+- Upload USB COM10 pada460800 baud: sukses, hash terverifikasi. Firmware merespons `v0.2.0`, AP aktif di192.168.4.1 setelah reboot.
+- Uji USB pada perangkat: password7 karakter dan input64 karakter ditolak tanpa perubahan credentials; password yang diminta tersimpan dan bertahan setelah reboot. Token API dan password OTA identik sebelum/sesudah perubahan. Record lokal privat diperbarui, tetap diabaikan Git.
+- Identifikasi perangkat sebelumnya: ESP32-S3 rev0.2, flash16MB, embedded PSRAM8MB, USB-UART CH340. Profile4MB/no-PSRAM menggunakan subset hardware ini; GPIO masih perlu dicocokkan dengan schematic board.
+- LED fisik, autentikasi Wi-Fi dari client, API ESP32, OTA dan endurance belum diuji. Ringkasan di bawah adalah hasil historis v0.1.0, bukan status terbaru provisioning USB.
+
+## Baseline historis v0.1.0
 
 Tanggal: **2026-10-06, Asia/Bangkok**. Status: implementasi software; **belum disahkan untuk operasi gudang**.
 

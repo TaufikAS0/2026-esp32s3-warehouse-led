@@ -8,6 +8,7 @@ void WifiService::begin(SettingsStore& store) {
 }
 void WifiService::start(uint32_t now) {
   WiFi.mode(WIFI_AP_STA);
+  WiFi.setSleep(false); // Mains-powered controller: prioritize interactive HTTP/OTA latency.
   started_ = true; attemptAt_ = now;
   if (store_->ssid().isEmpty()) startAp();
   else WiFi.begin(store_->ssid().c_str(), store_->pass().c_str());

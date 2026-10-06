@@ -7,6 +7,11 @@ bool OtaService::enable(uint32_t now) {
   if (!active_) {
     ArduinoOTA.setHostname(wifi_->apName().c_str());
     ArduinoOTA.setPassword(store_->otaPass().c_str());
+    // Tolerate packet gaps during maintenance on a congested warehouse WLAN.
+    ArduinoOTA.setTimeout(Hardware::kOtaTransferTimeoutMs);
+    ArduinoOTA.onStart([] { Serial.println("OTA transfer started; maintenance in progress."); });
+    ArduinoOTA.onEnd([] { Serial.println("OTA transfer complete; rebooting."); });
+    ArduinoOTA.onError([](ota_error_t error) { Serial.printf("OTA error=%u; inspect network/upload log.\n", unsigned(error)); });
     ArduinoOTA.begin(); active_ = true;
   }
   started_ = now;

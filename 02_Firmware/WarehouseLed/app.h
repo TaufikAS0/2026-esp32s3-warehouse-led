@@ -12,7 +12,7 @@ class App {
   WifiService wifi_;
   OtaService ota_;
   WebService web_;
-  char serialLine_[32]{};
+  char serialLine_[76]{};
   size_t serialLength_ = 0;
   bool serialOverflow_ = false;
   void serialUpdate();

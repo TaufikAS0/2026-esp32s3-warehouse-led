@@ -54,13 +54,26 @@ bool SettingsStore::provision() {
   JsonDocument doc;
   // Provisioning runs before Wi-Fi/ADC startup. Supply non-RF entropy for credential generation.
   bootloader_random_enable();
-  const String token = randomHex(32), ap = randomHex(12), ota = randomHex(16);
+  const String token = randomHex(32), ap = Hardware::kDefaultApPassword, ota = randomHex(16);
   bootloader_random_disable();
   doc["token"] = token; doc["ap"] = ap; doc["ota"] = ota;
   String raw; serializeJson(doc, raw);
   if (prefs_.putString("credentials", raw) != raw.length()) return false;
   token_ = token; apPass_ = ap; otaPass_ = ota;
   printCredentials();
+  return true;
+}
+bool SettingsStore::setApPassword(const String& password) {
+  if (!open_ || !ready() || password.length() < 8 || password.length() > 63) return false;
+  for (size_t i = 0; i < password.length(); ++i) {
+    if (password[i] < 32 || password[i] > 126) return false;
+  }
+  if (password == apPass_) return true;
+  JsonDocument doc;
+  doc["token"] = token_; doc["ap"] = password; doc["ota"] = otaPass_;
+  String raw; serializeJson(doc, raw);
+  if (prefs_.putString("credentials", raw) != raw.length()) return false;
+  apPass_ = password;
   return true;
 }
 void SettingsStore::printCredentials() const {

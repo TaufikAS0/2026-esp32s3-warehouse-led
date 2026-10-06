@@ -13,7 +13,7 @@ void App::begin() {
   if (!leds_.begin()) Serial.println("LED buffer allocation failed");
   if (!store_.loadError().isEmpty()) Serial.println(store_.loadError());
   wifi_.begin(store_); ota_.begin(store_, wifi_); web_.begin();
-  Serial.println("USB commands: provision (first setup), credentials (explicit read), info");
+  Serial.println("USB commands: provision (first setup), credentials (explicit read), ap-password <8..63 chars>, info");
   if (!store_.ready()) Serial.println("Network locked until USB provision completes.");
 }
 void App::serialUpdate() {
@@ -27,6 +27,12 @@ void App::serialUpdate() {
       else if (!strcmp(serialLine_, "provision")) {
         if (!store_.provision()) Serial.println("Provision refused (already provisioned or NVS write failed).");
       } else if (!strcmp(serialLine_, "credentials")) store_.printCredentials();
+      else if (!strncmp(serialLine_, "ap-password ", 12)) {
+        if (store_.setApPassword(String(serialLine_ + 12))) {
+          wifi_.scheduleRestart(millis());
+          Serial.println("AP password saved; network restart scheduled.");
+        } else Serial.println("AP password refused (not provisioned, invalid input, or NVS write failed).");
+      }
       else if (!strcmp(serialLine_, "info"))
         Serial.printf("%s IP=%s STA=%d AP=%d\n", Firmware::kVersion, wifi_.ip().c_str(), wifi_.sta(), wifi_.ap());
       else if (serialLength_) Serial.println("Unknown USB command");

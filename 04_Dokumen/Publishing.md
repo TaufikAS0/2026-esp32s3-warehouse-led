@@ -1,6 +1,6 @@
 # Persiapan GitHub private
 
-Target: `TaufikAS0/2026-esp32s3-warehouse-led`, private. Remote private sudah dibuat dan origin lokal disiapkan; source/branch belum dipush pada tahap implementasi lokal.
+Target: `TaufikAS0/2026-esp32s3-warehouse-led`, private. Integration branch adalah develop; implementasi berada di feature/warehouse-led-controller dan dipublikasikan melalui PR ke develop. main dicadangkan untuk release produksi setelah acceptance hardware.
 
 ## Goal
 
@@ -12,7 +12,7 @@ Ya: feature/warehouse-led-controller berasal dari bootstrap develop. main baru d
 
 ## Branch flow
 
-Bootstrap develop → feature/warehouse-led-controller → reviewed PR develop → release/v0.1.0 → main dan back-merge develop saat benar-benar siap produksi.
+Bootstrap develop → feature/warehouse-led-controller → reviewed PR develop → release/v0.3.2 → main dan back-merge develop saat benar-benar siap produksi.
 
 ## Commands when publication is requested
 

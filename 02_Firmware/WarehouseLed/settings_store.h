@@ -7,8 +7,9 @@ class SettingsStore {
   bool begin(Warehouse::Config& config);
   bool save(const Warehouse::Config& config, const String& ssid, const String& pass);
   bool provision();
+  bool setApPassword(const String& password);
   void printCredentials() const;
-  bool ready() const { return token_.length() == 64 && apPass_.length() >= 16 && otaPass_.length() >= 16; }
+  bool ready() const { return token_.length() == 64 && apPass_.length() >= 8 && apPass_.length() <= 63 && otaPass_.length() >= 16; }
   const String& token() const { return token_; }
   const String& apPass() const { return apPass_; }
   const String& otaPass() const { return otaPass_; }
