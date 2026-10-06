@@ -1,0 +1,10 @@
+_sandbox/
+.build/
+__pycache__/
+*.pyc
+.env
+secrets*
+*.bin
+*.elf
+*.map
+.vscode/
