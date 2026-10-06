@@ -9,6 +9,7 @@
 - Suite domain, driver, codec,11 Python tests dan UI DOM lulus. Compile S3 UART/CH340, core3.3.10,4MB, PSRAM off: flash1053517/1310720 byte (80%), RAM61180/327680 byte (18%).
 - Authenticated OTA v0.5.1 sukses; reboot kembali STA, mapping satu box/tiga LED dan Wi-Fi tetap, OTA tertutup, seluruh state padam. HTML perangkat cocok dengan source dan versi terlihat di Chrome.
 - Tes fisik awal: dari Chrome menyalakan R01-B01/GPIO4/LED1–3 hijau, brightness50, timer60 detik. Pengguna mengonfirmasi **ketiga LED fisik menyala**. Bukti ini mengesahkan nyala tiga LED pada rangkaian awal; RGB lengkap,75/300 LED, empat output RMT simultan, listrik dan8 jam masih belum diuji.
+- Konfigurasi B02 melalui Chrome: mapping LED4–6 ditolak ketika jumlah LED Rak1 masih3. Setelah jumlah output diubah menjadi6, R01-B02 berhasil disimpan pada LED4–6, B01 tetap LED1–3, dan mapping bertahan setelah halaman dimuat ulang. Perintah B02 biru/brightness50/timer60 detik diterima; dashboard menunjukkan B02 aktif dan B01 padam. Pengguna menerima hasil dan mengizinkan publikasi. Tidak ada perubahan source atau versi firmware untuk penyesuaian konfigurasi perangkat ini; warna/jumlah LED fisik B02 tidak dikonfirmasi secara terpisah.
 
 ## v0.5.0 — akses terbuka dan tes hardware rak, 2026-10-06
 
