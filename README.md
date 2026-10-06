@@ -1,6 +1,6 @@
 # ESP32-S3 Warehouse LED Controller
 
-Firmware **v0.3.2** untuk satu ESP32-S3, empat output WS2812B, maksimum 100 box / 300 LED. JARVIS mengirim ID box melalui HTTP; controller menyimpan mapping dan menjalankan timer secara lokal.
+Firmware **v0.4.0** untuk satu ESP32-S3, empat output WS2812B, maksimum 100 box / 300 LED. JARVIS mengirim ID box melalui HTTP; controller menyimpan mapping dan menjalankan timer secara lokal.
 
 Default aman: satu box `R01-B01`, tiga LED, brightness maksimum 128, seluruh LED padam setelah reboot. Tambahkan box melalui generator/editor web sampai empat rak × 25 box. Jumlah LED diisi manual, tidak dideteksi otomatis.
 
@@ -13,7 +13,7 @@ Default aman: satu box `R01-B01`, tiga LED, brightness maksimum 128, seluruh LED
 5. Hubungkan ke AP `Warehouse-<suffix>`, buka `http://192.168.4.1/`, masukkan token, dan simpan Wi-Fi gudang serta mapping.
 6. Untuk JARVIS, gunakan [API](04_Dokumen/API.md) dan [client Python](scripts/warehouse_client.py). Database barang tidak berada di controller ini.
 
-Dashboard mengikuti referensi visual LumenGrid: empat panel rak,25 posisi per rak, status aktif/timer/warna, pencarian/filter dan panel kontrol box. Konfigurasi dipisahkan dari peta. Tes RGB/kedip berlangsung3 detik; preset setup satu box/tiga LED dan tiga box/satu LED membantu bring-up. Panduan langkah demi langkah: [Web Operator Guide](04_Dokumen/Web_Operator_Guide.md). Tidak memakai CDN atau aset eksternal.
+Dashboard mengikuti referensi visual LumenGrid: empat panel rak,25 posisi per rak, status aktif/timer/warna, pencarian/filter dan panel kontrol box. Semua slot dapat diklik untuk editor per box langsung pada peta; konfigurasi global tetap tersedia. Tes RGB/kedip berlangsung3 detik; preset setup satu box/tiga LED dan tiga box/satu LED membantu bring-up. Panduan langkah demi langkah: [Web Operator Guide](04_Dokumen/Web_Operator_Guide.md). Tidak memakai CDN atau aset eksternal.
 
 ## Struktur dan Git
 

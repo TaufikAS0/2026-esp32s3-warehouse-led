@@ -1,5 +1,15 @@
 # Laporan verifikasi
 
+## v0.4.0 — editor box langsung, 2026-10-06
+
+- Semua 100 slot awal dapat dipilih, termasuk box belum dikonfigurasi. Editor per box menyediakan ID, nama, rak/output, LED awal, jumlah LED box dan jumlah LED terpasang. Tes hanya tersedia untuk mapping tersimpan.
+- Suite domain/codec, 11 tes Python, serta DOM HTML/JS lulus. Kasus tambahan: tambah box lewat slot kosong, ganti ID/nama, tes box hasil rename, rentang melebihi output, overlap, ID duplikat, penolakan penyimpanan 503, dan proteksi draft konfigurasi global. Penolakan menjaga mapping/state lama dan draft editor.
+- Compile core 3.3.10 / generic S3 / flash4 MB / PSRAM disabled / hwcdc / CDCOnBoot disabled lulus: flash1049101/1310720 byte (80%), RAM61116/327680 byte (18%).
+- Upload USB COM10 lulus. Perangkat sempat diganti ke program Running LED oleh pengguna saat verifikasi; firmware dashboard diunggah ulang, lalu root HTML dibandingkan persis dengan source. Karena ada pergantian firmware selama sesi, kegagalan OTA awal tidak dapat disimpulkan sebagai cacat autentikasi atau transfer firmware gudang.
+- Setelah firmware stabil, authenticated OTA v0.4.0 berhasil. Reboot kembali STA, mapping/Wi-Fi tetap tersimpan, semua LED padam dan OTA tertutup. Kredensial tetap privat.
+- HTTP perangkat nyata lulus untuk simpan perubahan nama satu box tanpa mengubah Wi-Fi, penolakan box baru di luar jumlah LED terpasang, RGB/blink brightness32, serta expiry3 detik. Mapping asli satu box/tiga LED dikembalikan dan seluruh LED dipadamkan setelah tes.
+- Verifikasi ulang visual browser pada versi ini sempat terhambat koneksi CDP browser Codex; hasil DOM otomatis dan HTTP perangkat dicatat terpisah dari klik browser aktual. Nyala optik LED, 75/300 LED, listrik dan endurance belum disertifikasi.
+
 ## Update v0.3.2 — 2026-10-06
 
 | Pemeriksaan | Hasil dan batas bukti |

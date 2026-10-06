@@ -1,2 +1,2 @@
 #pragma once
-namespace Firmware { constexpr const char* kVersion = "v0.3.2"; }
+namespace Firmware { constexpr const char* kVersion = "v0.4.0"; }

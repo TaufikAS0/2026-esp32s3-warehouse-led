@@ -10,7 +10,7 @@ assert.doesNotMatch(html, /â|Ã|Â/, 'UTF-8 labels must not contain mojibake');
 const clone = obj => JSON.parse(JSON.stringify(obj));
 let config = {schema:1, brightness_limit:128, outputs:[3,0,0,0],
   boxes:[{id:'R01-B01',name:'Rak 1 Box 1',output:1,start_led:1,led_count:3}],wifi:{ssid:'',password_configured:false}};
-let states = new Map(), calls = [], poll, failStatus=false;
+let states = new Map(), calls = [], poll, failStatus=false, failSave=false;
 const dom = new JSDOM(html, {url:'http://warehouse-fixture.test/', runScripts:'dangerously', pretendToBeVisual:true,
   beforeParse(window) {
     window.AbortController = global.AbortController;
@@ -22,6 +22,7 @@ const dom = new JSDOM(html, {url:'http://warehouse-fixture.test/', runScripts:'d
         return {ok:false,status:401,json:async()=>({error:'invalid token'})};
       let result;
       if(url.endsWith('/config') && options.method==='PUT') {
+        if(failSave)return {ok:false,status:503,json:async()=>({error:'storage write failed'})};
         const seen=new Set(), occupied=new Set();
         for(const box of payload.boxes) {
           if(seen.has(box.id)) return {ok:false,status:400,json:async()=>({error:'duplicate box ID'})};
@@ -32,7 +33,7 @@ const dom = new JSDOM(html, {url:'http://warehouse-fixture.test/', runScripts:'d
             occupied.add(key);
           }
         }
-        config=clone(payload);config.wifi.password_configured=false;states.clear();result=config;
+        config={...clone(payload),wifi:payload.wifi||config.wifi};config.wifi.password_configured=false;states.clear();result=config;
       } else if(url.endsWith('/config')) result=config;
       else if(url.endsWith('/status')) {if(failStatus)throw new TypeError('Network disconnected');result={version:'v0.3.2',ip:'fixture',sta_connected:true,ap_active:false,
         ap_ssid:'Warehouse-fixture',outputs:config.outputs,brightness_limit:config.brightness_limit,
@@ -56,8 +57,29 @@ async function main(){
   $('token').value='a'.repeat(64);await click('connect');
   assert.equal($('mapping').children.length,1);assert.equal($('box-grid').children.length,4);
   assert.equal(document.querySelectorAll('.box').length,100);
-  assert.equal(document.querySelectorAll('.box.placeholder:disabled').length,99);
+  assert.equal(document.querySelectorAll('.box.placeholder:disabled').length,0);
   assert.equal($('turn-on').disabled,true);
+  document.querySelector('[data-box-id="R01-B02"]').click();await settle();
+  assert.equal($('selected-id').textContent,'R01-B02');assert.equal($('box-start').value,'4');
+  assert.equal($('turn-on').disabled,true);
+  await click('save-box');assert.match($('message').textContent,/rentang melebihi/);assert.equal(config.boxes.length,1);
+  $('box-installed').value=6;await click('save-box');assert.equal(config.boxes.length,2);
+  assert.equal(config.outputs[0],6);assert.equal($('turn-on').disabled,false);
+  await click('test-green');assert.deepEqual(states.get('R01-B02').color,[0,255,0]);
+  $('box-id').value='R01-B01';await click('save-box');assert.match($('message').textContent,/duplicate box ID/);
+  assert.equal(config.boxes[1].id,'R01-B02');assert.equal(states.get('R01-B02').on,true);
+  $('box-id').value='CUSTOM-02';$('box-name').value='Box spare';await click('save-box');
+  assert.equal($('selected-id').textContent,'CUSTOM-02');assert.equal(config.boxes[1].name,'Box spare');
+  await click('test-blue');assert.equal(states.get('CUSTOM-02').on,true);
+  $('box-start').value=2;await click('save-box');assert.match($('message').textContent,/overlapping/);
+  assert.equal(config.boxes[1].start_led,4);
+  $('box-start').value=4;$('box-name').value='Unsaved';failSave=true;
+  await click('save-box');assert.match($('message').textContent,/storage write failed/);
+  assert.equal(config.boxes[1].name,'Box spare');assert.equal(states.get('CUSTOM-02').on,true);
+  assert.equal($('box-name').value,'Unsaved');failSave=false;
+  $('limit').dispatchEvent(new dom.window.Event('input'));await click('save-box');
+  assert.match($('message').textContent,/global memiliki draft/);await click('reload');
+  await click('setup-three');await click('save');
   $('rack-count').value=4;$('boxes-per-rack').value=25;await click('generate');
   assert.equal($('mapping').children.length,100);
   assert.deepEqual(Array.from($('output-inputs').querySelectorAll('input')).map(x=>x.value),['75','75','75','75']);

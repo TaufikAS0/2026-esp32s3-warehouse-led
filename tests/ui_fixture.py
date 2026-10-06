@@ -48,6 +48,7 @@ class Handler(BaseHTTPRequestHandler):
                     if pixel in pixels or led > body['outputs'][box['output'] - 1]:
                         return self.reply({'error': 'invalid mapping'}, 400)
                     pixels.add(pixel)
+            body.setdefault('wifi', CONFIG['wifi'])
             CONFIG = body
             CONFIG['wifi'].pop('password', None)
             CONFIG['wifi']['password_configured'] = False
@@ -74,7 +75,7 @@ class Handler(BaseHTTPRequestHandler):
                     s['remaining_ms'] = max(0, int((s.pop('deadline') - time.monotonic()) * 1000))
                     s['on'] = s['on'] and s['remaining_ms'] > 0
                 states.append(s)
-            return self.reply({'version': 'v0.3.2 [UI fixture]', 'ip': '127.0.0.1', 'sta_connected': True,
+            return self.reply({'version': 'v0.4.0 [UI fixture]', 'ip': '127.0.0.1', 'sta_connected': True,
                                'ap_active': False, 'ap_ssid': 'Warehouse-FIXTURE', 'outputs': CONFIG['outputs'],
                                'brightness_limit': CONFIG['brightness_limit'], 'ota_remaining_ms': 0,
                                'led_driver_ready': True, 'storage_error': '', 'boxes': states})

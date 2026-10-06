@@ -11,6 +11,10 @@ Dashboard memakai warna slate/cyan, empat panel rak dengan25 posisi per rak, dan
 
 ## Tes awal tiga LED
 
+Semua posisi box dapat diklik, termasuk slot abu-abu. Klik membuka editor langsung untuk ID, nama, output/rak, LED awal dan jumlah LED box. Isi jumlah LED terpasang sesuai hardware, lalu tekan **Simpan box**. Mapping baru harus disimpan sebelum tombol tes dapat dipakai. Simpan memadamkan seluruh box dan mempertahankan konfigurasi box lain serta Wi-Fi. Jika ada draft di halaman Konfigurasi, simpan atau buang draft tersebut dahulu.
+
+Untuk box yang sudah tersimpan, klik box lalu gunakan Tes warna cepat atau Nyalakan LED box. Perintah tes memakai mapping tersimpan; perubahan pada field editor baru diterapkan setelah Simpan box. Slot dengan ID Rxx-Bxx mengikuti nomor B pada rak tersebut; ID custom menempati posisi kosong menurut urutan mapping.
+
 1. Buka Konfigurasi → Setup1 box /3 LED → Simpan konfigurasi. Generator hanya membuat draft; Simpan memadamkan seluruh box dan menerapkan mapping.
 2. Buka Peta rak & box → pilih B01 pada Rak1. Lokasi harus menunjukkan GPIO4, LED1–3.
 3. Tekan Merah, Hijau, atau Biru pada bagian Tes warna cepat. Setiap tes berlangsung3 detik, memakai brightness yang dipilih serta batas global.

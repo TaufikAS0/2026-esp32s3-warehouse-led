@@ -12,9 +12,9 @@ const char kWebUi[] PROGMEM = R"HTML(<!doctype html>
 <div id="message" role="status" aria-live="polite">Pilih box pada peta untuk membuka kontrol. Hubungkan dahulu dengan token API.</div>
 <div class="stats"><div class="stat"><span>BOX AKTIF</span><strong id="active-count">—</strong></div><div class="stat"><span>BOX TERKONFIGURASI / 100</span><strong id="configured-count">—</strong></div><div class="stat"><span>LED TERPASANG / 300</span><strong id="led-count">—</strong></div><div class="stat"><span>BATAS BRIGHTNESS</span><strong id="global-limit">—</strong></div></div>
 <section id="map-page"><div class="toolbar"><input id="search" aria-label="Cari ID atau nama box" placeholder="Cari ID box atau nama…"><select id="rack-filter" aria-label="Filter rak"><option value="0">Semua rak</option><option value="1">Rak 01</option><option value="2">Rak 02</option><option value="3">Rak 03</option><option value="4">Rak 04</option></select><select id="state-filter" aria-label="Filter status"><option value="all">Semua status</option><option value="on">Aktif</option><option value="off">Padam</option><option value="unconfigured">Belum dikonfigurasi</option></select></div>
-<p class="note">Kapasitas 4 rak × 25 box. Posisi abu-abu belum dikonfigurasi. Grid 5×5 adalah urutan box; cocokkan susunannya dengan rak fisik.</p>
+<p class="note">Kapasitas 4 rak × 25 box. Klik setiap box untuk konfigurasi dan tes LED. Posisi abu-abu belum dikonfigurasi. Grid 5×5 adalah urutan box; cocokkan susunannya dengan rak fisik.</p>
 <div class="workspace"><div id="box-grid"></div><aside id="control" class="panel control"><div class="eyebrow">Kontrol manual WS2812B</div><h2 id="selected-id">Pilih box</h2><div class="detail-line"><span>Nama</span><strong id="selected-name">—</strong></div><div class="detail-line"><span>Lokasi</span><strong id="selected-location">—</strong></div><div class="detail-line"><span>Rentang LED</span><strong id="selected-leds">—</strong></div><div class="detail-line"><span>Status firmware</span><strong id="selected-state">—</strong></div><div id="led-preview" class="led-preview" aria-label="Ilustrasi LED"></div>
-<label>Warna LED</label><div class="swatches"><button data-color="#4cd7f6" style="--swatch:#4cd7f6" aria-label="Cyan"></button><button data-color="#00ff00" style="--swatch:#00ff00" aria-label="Hijau"></button><button data-color="#ff0000" style="--swatch:#ff0000" aria-label="Merah"></button><button data-color="#0000ff" style="--swatch:#0000ff" aria-label="Biru"></button><button data-color="#b395ff" style="--swatch:#b395ff" aria-label="Ungu"></button><button data-color="#ffffff" style="--swatch:#ffffff" aria-label="Putih"></button></div><div class="row" style="margin-top:10px"><input id="color" type="color" value="#00ff00" aria-label="Warna custom"><small id="color-value">#00FF00</small></div>
+<section id="box-editor" hidden><div class="divider"></div><div class="eyebrow">Konfigurasi box terpilih</div><label>ID box<input id="box-id" maxlength="24"></label><label>Nama box<input id="box-name"></label><div class="row"><label>Output / Rak<select id="box-output"><option value="1">Rak 01 / GPIO 4</option><option value="2">Rak 02 / GPIO 5</option><option value="3">Rak 03 / GPIO 6</option><option value="4">Rak 04 / GPIO 7</option></select></label></div><div class="row"><label>LED awal<input id="box-start" type="number" min="1" max="75"></label><label>Jumlah LED box<input id="box-count" type="number" min="1" max="75"></label></div><label>Jumlah LED terpasang pada output ini<input id="box-installed" type="number" min="0" max="75"></label><p class="note">Isi sesuai hardware. LED dihitung mulai 1. Simpan memadamkan semua box; draft tidak mengubah LED.</p><button id="save-box" class="primary">Simpan box</button><p id="box-save-state" class="note">Simpan mapping sebelum tes LED.</p></section><div class="divider"></div><label>Warna LED</label><div class="swatches"><button data-color="#4cd7f6" style="--swatch:#4cd7f6" aria-label="Cyan"></button><button data-color="#00ff00" style="--swatch:#00ff00" aria-label="Hijau"></button><button data-color="#ff0000" style="--swatch:#ff0000" aria-label="Merah"></button><button data-color="#0000ff" style="--swatch:#0000ff" aria-label="Biru"></button><button data-color="#b395ff" style="--swatch:#b395ff" aria-label="Ungu"></button><button data-color="#ffffff" style="--swatch:#ffffff" aria-label="Putih"></button></div><div class="row" style="margin-top:10px"><input id="color" type="color" value="#00ff00" aria-label="Warna custom"><small id="color-value">#00FF00</small></div>
 <label for="brightness-range">Brightness <span id="brightness-value">50%</span></label><div class="row"><input id="brightness-range" type="range" min="0" max="255" value="128" style="flex:1"><input id="brightness" aria-label="Brightness 0–255" type="number" min="0" max="255" value="128"></div><p class="note">Nilai efektif dibatasi batas global. Pengaturan tidak langsung menyalakan LED.</p>
 <div class="row"><label>Mode<select id="mode"><option value="steady">Nyala tetap</option><option value="blink">Kedip 1 detik</option></select></label><label>Durasi detik<input id="seconds" type="number" min="1" max="3600" value="60"></label></div><div class="row" style="margin-top:10px"><button data-seconds="10">10s</button><button data-seconds="60">60s</button><button data-seconds="300">5m</button></div>
 <div class="control-actions"><button id="turn-on" class="primary" data-control>Nyalakan LED box</button><button id="turn-off" data-control>Padamkan box</button><button id="test-blink" data-control>Tes kedip 3 detik</button></div><div class="divider"></div><div class="eyebrow">Tes warna cepat • 3 detik</div><div class="test-buttons"><button id="test-red" data-control>Merah</button><button id="test-green" data-control>Hijau</button><button id="test-blue" data-control>Biru</button></div><p class="note">Tes mengganti perintah pada box terpilih, memakai brightness yang dipilih dan timer 3 detik. Warna pada layar adalah ilustrasi; firmware tidak mendeteksi nyala LED fisik.</p></aside></div></section>
@@ -28,7 +28,7 @@ const char kWebUi[] PROGMEM = R"HTML(<!doctype html>
 
 'use strict';
 const $=id=>document.getElementById(id);
-let token=sessionStorage.getItem('warehouse-token')||'', config=null, latest=null, polling=false, selected=null, online=false, layoutKey='', busy=false;
+let token=sessionStorage.getItem('warehouse-token')||'', config=null, latest=null, polling=false, selected=null, online=false, layoutKey='', busy=false, selectedSlot=null;
 $('token').value=token;
 function message(text){$('message').textContent=text;}
 async function api(path,method='GET',data){
@@ -55,6 +55,10 @@ function draft(){
  const boxes=Array.from($('mapping').children).map(row=>{const b={};row.querySelectorAll('input').forEach(el=>{b[el.dataset.field]=el.type==='number'?Number(el.value):el.value;});return b;});
  const result={schema:1,brightness_limit:integer('limit',0,255),outputs:[0,1,2,3].map(i=>integer('output-'+i,0,75)),boxes,wifi:{ssid:$('ssid').value}};
  if($('replace-pass').checked)result.wifi.password=$('wifi-pass').value;
+ return validateMapping(result);
+}
+function validateMapping(result){
+ const boxes=result.boxes;
  if(!boxes.length||boxes.length>100)throw new Error('Mapping memerlukan 1–100 box');
  const ids=new Set(),occupied=new Set();
  for(const b of boxes){
@@ -66,15 +70,22 @@ function draft(){
  }
  return result;
 }
-function selectBox(id){selected=id;cards();if(matchMediaMobile())$('control').scrollIntoView?.({block:'start'});}
+function selectBox(id,slot=null){
+ selected=id;selectedSlot=slot;
+ const box=config?.boxes.find(b=>b.id===id),b=box||{id:slot.id,name:'Rak '+slot.output+' Box '+slot.number,output:slot.output,start_led:(slot.number-1)*3+1,led_count:3};
+ for(const [field,key] of [['box-id','id'],['box-name','name'],['box-output','output'],['box-start','start_led'],['box-count','led_count']])$(field).value=b[key];
+ $('box-installed').value=config.outputs[b.output-1];$('box-save-state').textContent=box?'Mapping tersimpan. Tes LED tersedia di bawah.':'Belum dikonfigurasi. Simpan mapping sebelum tes LED.';
+ cards();if(matchMediaMobile())$('control').scrollIntoView?.({block:'start'});
+}
 function matchMediaMobile(){return window.innerWidth<=760;}
 function updateControl(){
  const box=config?.boxes.find(b=>b.id===selected), state=latest?.boxes.find(s=>s.id===selected);
  document.querySelectorAll('[data-control]').forEach(b=>b.disabled=!box||!online||busy);
- $('selected-id').textContent=box?.id||'Pilih box';$('selected-name').textContent=box?.name||'—';
+ $('box-editor').hidden=!box&&!selectedSlot;$('save-box').disabled=(!box&&!selectedSlot)||!online||busy;
+ $('selected-id').textContent=box?.id||selectedSlot?.id||'Pilih box';$('selected-name').textContent=box?.name||'—';
  $('selected-location').textContent=box?'Rak '+box.output+' / GPIO '+[4,5,6,7][box.output-1]:'—';
  $('selected-leds').textContent=box?box.start_led+'–'+(box.start_led+box.led_count-1)+' ('+box.led_count+' LED)':'—';
- $('selected-state').textContent=!box?'—':!online?'Data terakhir / terputus':state?.on?(state.mode==='blink'?'Kedip':'Aktif')+' • '+Math.ceil(state.remaining_ms/ 1000)+'s':'Padam';
+ $('selected-state').textContent=!box?(selectedSlot?'Belum dikonfigurasi':'—'):!online?'Data terakhir / terputus':state?.on?(state.mode==='blink'?'Kedip':'Aktif')+' • '+Math.ceil(state.remaining_ms/ 1000)+'s':'Padam';
  $('led-preview').replaceChildren();if(box)for(let i=0;i<Math.min(box.led_count,12);i++){
   const led=document.createElement('span');led.className='diode';led.textContent=box.start_led+i;
   if(state?.on){led.style.background=rgb(state.color);led.style.color='#061020';} $('led-preview').append(led);}
@@ -90,14 +101,17 @@ function cards(){
    const heading=document.createElement('h2'),title=document.createElement('span'),meta=document.createElement('small');
    title.textContent='RAK '+String(r).padStart(2,'0');heading.append(title,meta);const grid=document.createElement('div');grid.className='rack-grid';
    const boxes=(config?.boxes||[]).filter(b=>b.output===r).sort((a,b)=>a.start_led-b.start_led);
-   for(let i=0;i<Math.max(25,boxes.length);i++){
-    const box=boxes[i],card=document.createElement('button');card.type='button';card.className='box';
-    card.dataset.boxId=box?.id||'';card.dataset.placeholder=box?'0':'1';card.disabled=!box;
+   const slots=Array(25).fill(null),extra=[];
+   for(const b of boxes){const m=b.id.match(new RegExp('^R'+String(r).padStart(2,'0')+'-B(\\d{2})$'));const n=m?Number(m[1]):0;if(n>=1&&n<=25&&!slots[n-1])slots[n-1]=b;else extra.push(b);}
+   for(const b of extra){const empty=slots.indexOf(null);if(empty>=0)slots[empty]=b;else slots.push(b);}
+   for(let i=0;i<slots.length;i++){
+    const box=slots[i],slot={id:'R'+String(r).padStart(2,'0')+'-B'+String(i+1).padStart(2,'0'),output:r,number:i+1},card=document.createElement('button');card.type='button';card.className='box';
+    card.dataset.boxId=box?.id||slot.id;card.dataset.placeholder=box?'0':'1';card.disabled=!config;
     const id=document.createElement('strong'),name=document.createElement('span'),detail=document.createElement('small'),status=document.createElement('span');
     name.className='box-name';status.className='state-label';id.textContent=box?.id.match(/B[0-9]+$/)?.[0]||box?.id||'B'+String(i+1).padStart(2,'0');
     name.textContent=box?.name||'Belum diatur';detail.textContent=box?'LED '+box.start_led+'–'+(box.start_led+box.led_count-1):'—';
-    card.title=box?box.id+' • '+box.name:'Belum dikonfigurasi';card.append(id,name,detail,status);
-    if(box)card.onclick=()=>selectBox(box.id);grid.append(card);
+    card.title=box?box.id+' • '+box.name:slot.id+' • Klik untuk konfigurasi';card.append(id,name,detail,status);
+    card.onclick=()=>selectBox(box?.id||null,box?null:slot);grid.append(card);
    }rack.append(heading,grid);$('box-grid').append(rack);
   }
  }
@@ -109,10 +123,10 @@ function cards(){
   let visible=0;
   for(const card of rack.querySelectorAll('.box')){
    const box=configured.find(b=>b.id===card.dataset.boxId),state=latest?.boxes.find(s=>s.id===box?.id),on=!!state?.on;
-   card.className='box'+(!box?' placeholder':'')+(on?' active':'')+(box?.id===selected?' selected':'');
+   card.className='box'+(!box?' placeholder':'')+(on?' active':'')+((box&&box.id===selected)||(!box&&selectedSlot?.id===card.dataset.boxId)?' selected':'');
    card.style.setProperty('--led',on?rgb(state.color):'#9cacc6');
    card.querySelector('.state-label').textContent=!box?'BELUM DIATUR':!online?'DATA TERAKHIR':on?(state.mode==='blink'?'KEDIP':'AKTIF')+' '+Math.ceil(state.remaining_ms/ 1000)+'s':'PADAM';
-   card.hidden=!!(term&&(!box||!(box.id+' '+box.name).toLowerCase().includes(term)))||filter==='on'&&!on||filter==='off'&&(!box||on)||filter==='unconfigured'&&!!box;
+   card.hidden=!!(term&&!((box?box.id+' '+box.name:card.dataset.boxId+' Belum diatur').toLowerCase().includes(term)))||filter==='on'&&!on||filter==='off'&&(!box||on)||filter==='unconfigured'&&!!box;
    if(!card.hidden)visible++;
   }rack.hidden=(rackFilter!==0&&rackFilter!==r)||!visible;
  }
@@ -127,7 +141,23 @@ async function command(id,on,override={}){if(busy)return;busy=true;updateControl
  const payload=on?{on:true,color:[1,3,5].map(i=>parseInt(c.slice(i,i+2),16)),brightness:integer('brightness',0,255),mode:$('mode').value,duration_ms:integer('seconds',1,3600)*1000,...override}:{on:false};
  const state=await api('/boxes/'+encodeURIComponent(id)+'/state','PUT',payload);message(id+': '+(state.on?'nyala':'padam')+'; brightness efektif '+state.brightness);await refresh();});busy=false;updateControl();}
 $('connect').onclick=()=>run(async()=>{token=$('token').value.trim();if(!/^[a-f0-9]{64}$/.test(token))throw new Error('Token harus 64 karakter hex dari USB');sessionStorage.setItem('warehouse-token',token);config=await api('/config');showConfig();await refresh();$('auth').open=false;message('Terhubung. Pilih box untuk kontrol atau tes manual.');});
-$('logout').onclick=()=>{sessionStorage.removeItem('warehouse-token');token='';$('token').value='';latest=null;config=null;selected=null;connection(false);layoutKey='';$('box-grid').replaceChildren();$('mapping').replaceChildren();$('ssid').value='';$('wifi-pass').value='';$('summary').textContent='Token dilupakan.';for(const id of ['active-count','configured-count','led-count','global-limit'])$(id).textContent='—';$('auth').open=true;message('Token dihapus dari sesi.');};
+$('logout').onclick=()=>{sessionStorage.removeItem('warehouse-token');token='';$('token').value='';latest=null;config=null;selected=null;selectedSlot=null;connection(false);layoutKey='';$('box-grid').replaceChildren();$('mapping').replaceChildren();$('ssid').value='';$('wifi-pass').value='';$('summary').textContent='Token dilupakan.';for(const id of ['active-count','configured-count','led-count','global-limit'])$(id).textContent='—';$('auth').open=true;message('Token dihapus dari sesi.');};
+$('box-output').onchange=()=>{$('box-installed').value=config?.outputs[Number($('box-output').value)-1]||0;};
+for(const id of ['box-id','box-name','box-output','box-start','box-count','box-installed'])$(id).addEventListener('input',()=>{$('box-save-state').textContent='Draft box belum disimpan.';});
+$('save-box').onclick=()=>run(async()=>{
+ if(!config||!online)throw new Error('Hubungkan dan baca status dahulu');
+ if($('config-state').textContent==='Draft belum disimpan')throw new Error('Konfigurasi global memiliki draft. Simpan atau buang draft dahulu di Konfigurasi.');
+ const original=selected,b={id:$('box-id').value.trim(),name:$('box-name').value,output:integer('box-output',1,4),start_led:integer('box-start',1,75),led_count:integer('box-count',1,75)},installed=integer('box-installed',0,75);
+ busy=true;updateControl();
+ try{
+  const current=await api('/config'),candidate={schema:current.schema,brightness_limit:current.brightness_limit,outputs:[...current.outputs],boxes:current.boxes.map(b=>({...b}))};
+  const index=candidate.boxes.findIndex(b=>b.id===original);
+  if(original&&index<0)throw new Error('Box berubah pada controller. Muat ulang konfigurasi dahulu.');
+  if(index>=0)candidate.boxes[index]=b;else candidate.boxes.push(b);
+  candidate.outputs[b.output-1]=installed;validateMapping(candidate);
+  config=await api('/config','PUT',candidate);showConfig();selectBox(b.id);await refresh();message(b.id+': konfigurasi tersimpan; seluruh LED padam. Pilih Tes warna untuk menyalakan box ini.');
+ }finally{busy=false;updateControl();}
+});
 $('search').oninput=cards;$('rack-filter').onchange=cards;$('state-filter').onchange=cards;
 $('all-off').onclick=()=>run(async()=>{await api('/all-off','POST');await refresh();message('Semua box padam.');});
 $('generate').onclick=()=>run(async()=>{if(!config)throw new Error('Hubungkan dahulu');const racks=integer('rack-count',1,4),boxes=integer('boxes-per-rack',1,25),leds=integer('leds-per-box',1,75);if(boxes*leds>75)throw new Error('Box × LED/box melebihi 75 LED per rak');
