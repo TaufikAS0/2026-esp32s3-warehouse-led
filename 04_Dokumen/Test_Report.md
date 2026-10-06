@@ -1,5 +1,15 @@
 # Laporan verifikasi
 
+## v0.5.1 — perbaikan driver tanpa keluaran LED, 2026-10-06
+
+- Pengguna melaporkan LED tidak menyala pada firmware gudang, tetapi program pembanding `esp32s3-ws2812b-web` berhasil pada rangkaian yang sama. Kedua program memakai GPIO4 dan GRB/800 kHz.
+- Akar penyebab: empat objek NeoPixel dibuat dengan constructor kosong. Pada NeoPixel1.15.2 dan ESP32 IDF5, constructor ini tidak memanggil `espInit()`; setPin/updateType/updateLength/begin tidak menggantikannya. Mutex bersama tetap kosong, sehingga espShow tidak mengirim sinyal meskipun buffer/API berhasil. Program pembanding memakai constructor berparameter yang memanggil espInit. Pemeriksaan source lokal1.15.5 juga menunjukkan perbedaan constructor yang sama.
+- Driver kini mengonstruksi keempat strip langsung dengan panjang75, pin terpusat dan GRB/800 kHz. Return begin dan alokasi diperiksa; tidak ada salinan objek yang memiliki buffer.
+- Tes regresi mengompilasi implementasi NeoPixel asli yang dipin bersama LedDriver. Shim hanya menggantikan GPIO/clock dan batas espInit/espShow: pola lama direproduksi tanpa inisialisasi/transmisi; pola baru menginisialisasi empat strip, mengirim frame GRB tiga LED hijau GPIO4 dan75 LED merah GPIO7, menahan frame identik serta memadamkan semua buffer. Ini bukan pengukuran timing RMT fisik.
+- Suite domain, driver, codec,11 Python tests dan UI DOM lulus. Compile S3 UART/CH340, core3.3.10,4MB, PSRAM off: flash1053517/1310720 byte (80%), RAM61180/327680 byte (18%).
+- Authenticated OTA v0.5.1 sukses; reboot kembali STA, mapping satu box/tiga LED dan Wi-Fi tetap, OTA tertutup, seluruh state padam. HTML perangkat cocok dengan source dan versi terlihat di Chrome.
+- Tes fisik awal: dari Chrome menyalakan R01-B01/GPIO4/LED1–3 hijau, brightness50, timer60 detik. Pengguna mengonfirmasi **ketiga LED fisik menyala**. Bukti ini mengesahkan nyala tiga LED pada rangkaian awal; RGB lengkap,75/300 LED, empat output RMT simultan, listrik dan8 jam masih belum diuji.
+
 ## v0.5.0 — akses terbuka dan tes hardware rak, 2026-10-06
 
 - Instruksi pengguna mengubah web/HTTP API menjadi akses LAN tanpa token. Mapping/status dimuat otomatis, dan versi firmware dirangkai pada HTML langsung dari satu macro firmware_version.h. Token browser lama dibuang.

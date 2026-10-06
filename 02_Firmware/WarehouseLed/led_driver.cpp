@@ -2,11 +2,8 @@
 #include "config.h"
 bool LedDriver::begin() {
   for (size_t i = 0; i < 4; ++i) {
-    strips_[i].setPin(Hardware::kLedPins[i]);
-    strips_[i].updateType(NEO_GRB + NEO_KHZ800);
-    strips_[i].updateLength(75); // Fixed capacity clears formerly mapped tail pixels too.
-    if (strips_[i].numPixels() != 75) return false;
-    strips_[i].begin();
+    // Fixed capacity also clears pixels left over after a mapping change.
+    if (strips_[i].numPixels() != 75 || !strips_[i].begin()) return false;
   }
   ready_ = true; off();
   return true;

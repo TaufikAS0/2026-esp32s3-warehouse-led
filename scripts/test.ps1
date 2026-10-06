@@ -17,6 +17,10 @@ try {
     if ($LASTEXITCODE) { throw 'Domain test build failed.' }
     & './_sandbox/domain_test.exe'
     if ($LASTEXITCODE) { throw 'Domain tests failed.' }
+    & $Cxx @taskPrefix -std=c++17 -Wall -Wextra -Werror -DARDUINO=10819 -DESP32 -I tests/neopixel_host -I 02_Firmware/WarehouseLed -I _sandbox/sketchbook/libraries/Adafruit_NeoPixel tests/led_driver_test.cpp 02_Firmware/WarehouseLed/led_driver.cpp _sandbox/sketchbook/libraries/Adafruit_NeoPixel/Adafruit_NeoPixel.cpp -o _sandbox/led_driver_test.exe
+    if ($LASTEXITCODE) { throw 'NeoPixel driver test build failed.' }
+    & './_sandbox/led_driver_test.exe'
+    if ($LASTEXITCODE) { throw 'NeoPixel driver tests failed.' }
     & $Cxx @taskPrefix -std=c++17 -Wall -Wextra -Werror -include tests/host_string.h -I 02_Firmware/WarehouseLed -I _sandbox/sketchbook/libraries/ArduinoJson/src tests/codec_test.cpp 02_Firmware/WarehouseLed/codec.cpp -o _sandbox/codec_test.exe
     if ($LASTEXITCODE) { throw 'Codec test build failed.' }
     & './_sandbox/codec_test.exe'

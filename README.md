@@ -1,6 +1,6 @@
 # ESP32-S3 Warehouse LED Controller
 
-Firmware **v0.5.0** untuk satu ESP32-S3, empat output WS2812B, maksimum 100 box / 300 LED. JARVIS mengirim ID box melalui HTTP; controller menyimpan mapping dan menjalankan timer secara lokal.
+Firmware **v0.5.1** untuk satu ESP32-S3, empat output WS2812B, maksimum 100 box / 300 LED. JARVIS mengirim ID box melalui HTTP; controller menyimpan mapping dan menjalankan timer secara lokal.
 
 Default aman: satu box `R01-B01`, tiga LED, brightness maksimum 128, seluruh LED padam setelah reboot. Tambahkan box melalui generator/editor web sampai empat rak × 25 box. Jumlah LED diisi manual, tidak dideteksi otomatis.
 
@@ -31,6 +31,6 @@ Repository target private `TaufikAS0/2026-esp32s3-warehouse-led`. Branch fitur `
 
 Jalankan `./scripts/test.ps1` dengan compiler C++ host, lalu `./scripts/build.ps1`. Lihat [laporan dan checklist penerimaan](04_Dokumen/Test_Report.md) untuk hasil aktual dan pekerjaan hardware yang belum dilakukan.
 
-v0.3.2 sudah diuji pada ESP32-S3 melalui USB dan authenticated OTA di LAN: reboot/reconnect, mapping tetap tersimpan, OTA tertutup setelah boot, HTML cocok dengan source, serta kontrol web/API untuk satu box. Pengujian300 LED, listrik dan endurance8 jam masih terbuka. Detail jaringan dan kredensial perangkat tetap pada penyimpanan lokal privat.
+v0.5.1 memperbaiki inisialisasi NeoPixel ESP32 yang sebelumnya menyebabkan LED tidak menyala meskipun API sukses. Authenticated OTA, reboot/reconnect, mapping tetap tersimpan, OTA tertutup dan HTML sesuai source telah diuji. Pengguna mengonfirmasi tiga LED GPIO4 menyala hijau dari kontrol Chrome. Pengujian300 LED, listrik dan endurance8 jam masih terbuka. Detail jaringan dan kredensial perangkat tetap pada penyimpanan lokal privat.
 
 Keberhasilan API berarti firmware menerima perintah; WS2812B tidak memberikan konfirmasi optik atau deteksi putus. Batas brightness software tidak menggantikan PSU, fuse, level shifter, dan validasi kabel.
