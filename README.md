@@ -1,6 +1,6 @@
 # ESP32-S3 Warehouse LED Controller
 
-Firmware **v0.6.0** untuk satu ESP32-S3, empat output WS2812B, maksimum 100 box / 300 LED. JARVIS mengirim ID box melalui HTTP; controller menyimpan mapping dan menjalankan timer secara lokal.
+Firmware **v0.6.1** untuk satu ESP32-S3, empat output WS2812B, maksimum 100 box / 300 LED. JARVIS mengirim ID box melalui HTTP; controller menyimpan mapping dan menjalankan timer secara lokal.
 
 Default aman: satu box `R01-B01`, tiga LED, brightness maksimum 128, seluruh LED padam setelah reboot. Tambahkan box melalui generator/editor web sampai empat rak × 25 box. Jumlah LED diisi manual, tidak dideteksi otomatis.
 

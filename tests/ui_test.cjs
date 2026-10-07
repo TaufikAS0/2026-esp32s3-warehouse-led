@@ -115,6 +115,8 @@ async function main(){
   failStatus=true;await poll();assert.equal($('turn-on').disabled,true);
   assert.match($('selected-state').textContent,/Data terakhir/);
   failStatus=false;await poll();assert.equal($('turn-on').disabled,false);
+  assert.doesNotMatch($('message').textContent,/Status tidak tersedia/);
+  assert.match($('message').textContent,/Koneksi kembali terhubung/);
   // A rejected save preserves device config and active state while keeping the visible draft.
   const rows=$('mapping').children;
   rows[1].querySelector('[data-field=id]').value='R01-B01';

@@ -36,7 +36,7 @@ let loading=false;
 function message(text){$('message').textContent=text;$('popup-message').textContent=text;}
 async function api(path,method='GET',data){
  const headers={};if(data!==undefined)headers['Content-Type']='application/json';
- const timeout=new AbortController(), timer=setTimeout(()=>timeout.abort(),5000);
+ const timeout=new AbortController(), timer=setTimeout(()=>timeout.abort(),method==='GET'?10000:5000);
  try{const res=await fetch('/api/v1'+path,{method,headers,body:data===undefined?undefined:JSON.stringify(data),signal:timeout.signal});
  const json=await res.json();if(!res.ok)throw new Error(res.status+' '+(json.error||'Request gagal'));return json;
  }finally{clearTimeout(timer);}
@@ -170,7 +170,7 @@ async function testRack(output,on,color,mode){
  });busy=false;cards();
 }
 function connection(ok){online=ok;$('connection').textContent=ok?'LIVE / TERHUBUNG':'STATUS TIDAK TERSEDIA';$('connection').className='badge'+(ok?'':' stale');updateControl();}
-async function refresh(){latest=await api('/status');connection(true);$('active-count').textContent=latest.boxes.filter(b=>b.on||b.program_on).length;const program=latest.program;$('program-state').textContent=program?.on?(program.idle?'IDLE':'TES')+' • '+program.pattern+' • '+(program.idle?'berkelanjutan':Math.ceil(program.remaining_ms/1000)+'s'):'Program padam';$('configured-count').textContent=config.boxes.length;$('led-count').textContent=latest.outputs.reduce((a,b)=>a+b,0);$('global-limit').textContent=Math.round(latest.brightness_limit/255*100)+'%';$('version').textContent='Firmware '+latest.version;
+async function refresh(){latest=await api('/status');connection(true);if($('message').textContent.startsWith('Status tidak tersedia:'))message('Koneksi kembali terhubung. Status terbaru sudah dimuat.');$('active-count').textContent=latest.boxes.filter(b=>b.on||b.program_on).length;const program=latest.program;$('program-state').textContent=program?.on?(program.idle?'IDLE':'TES')+' • '+program.pattern+' • '+(program.idle?'berkelanjutan':Math.ceil(program.remaining_ms/1000)+'s'):'Program padam';$('configured-count').textContent=config.boxes.length;$('led-count').textContent=latest.outputs.reduce((a,b)=>a+b,0);$('global-limit').textContent=Math.round(latest.brightness_limit/255*100)+'%';$('version').textContent='Firmware '+latest.version;
  $('summary').textContent='IP '+latest.ip+' | Router '+(latest.sta_connected?'terhubung':'terputus')+' | AP '+(latest.ap_active?latest.ap_ssid:'mati')+' | LED/output '+latest.outputs.join(', ')+' | Batas brightness '+latest.brightness_limit+' | OTA '+Math.ceil(latest.ota_remaining_ms/ 1000)+' dtk'+(latest.storage_error?' | Penyimpanan: '+latest.storage_error:'');cards();}
 async function run(action){try{await action();}catch(e){if(e.name==='AbortError'||e instanceof TypeError||/^401/.test(e.message)) {connection(false);cards();}message(e.name==='AbortError'?'Timeout: hasil perintah belum diketahui. Baca status sebelum mengirim ulang.':e.message);}}
 async function command(id,on,override={}){if(busy)return;busy=true;updateControl();await run(async()=>{if(!online)throw new Error('Hubungkan dan baca status dahulu');const c=$('color').value;
@@ -208,7 +208,7 @@ $('add-box').onclick=()=>{if(!config)return message('Hubungkan dahulu');if($('ma
 $('save').onclick=()=>run(async()=>{if(!config)throw new Error('Hubungkan dahulu');config=await api('/config','PUT',draft());showConfig();message('Konfigurasi tersimpan; seluruh LED padam. Jika Wi-Fi berubah, sambungkan ulang.');await refresh();});
 $('reload').onclick=()=>run(async()=>{config=await api('/config');showConfig();message('Konfigurasi dimuat; draft sebelumnya dibuang.');});
 for(const [id,enabled] of [['ota-on',true],['ota-off',false]])$(id).onclick=()=>run(async()=>{await api('/ota','POST',{enabled});await refresh();message(enabled?'OTA aktif maksimum 10 menit.':'OTA dimatikan.');});
-setInterval(async()=>{if(!config||loading||polling||document.hidden)return;polling=true;try{await refresh();}catch(e){connection(false);cards();message('Status tidak tersedia: '+e.message);}finally{polling=false;}},1000);
+setInterval(async()=>{if(!config||loading||polling||busy||document.hidden)return;polling=true;try{await refresh();}catch(e){connection(false);cards();message('Status tidak tersedia: '+(e.name==='AbortError'?'timeout; menunggu pembacaan ulang.':e.message));}finally{polling=false;}},1000);
 for(const id of ['limit','ssid','wifi-pass','replace-pass'])$(id).addEventListener('input',()=>{$('config-state').textContent='Draft belum disimpan';});
 
 function page(name){closeBox();$('map-page').hidden=name!=='map';$('config-page').hidden=name!=='config';$('nav-map').classList.toggle('active',name==='map');$('nav-config').classList.toggle('active',name==='config');}

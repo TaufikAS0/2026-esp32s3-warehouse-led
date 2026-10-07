@@ -1,5 +1,11 @@
 # Laporan verifikasi
 
+## v0.6.1 — pemulihan status web, 2026-10-07
+
+- Pesan timeout polling lama dibersihkan setelah pembacaan status sukses. GET web memakai timeout10 detik, mutation tetap5 detik tanpa retry. Polling dilewati selama perintah UI berjalan untuk mengurangi request status bersamaan. Tes DOM transport failure→recovery memastikan alarm lama hilang dan kontrol aktif kembali.
+- Seluruh suite host lulus. Build target sama: flash1064217/1310720 byte (81%), RAM61500/327680 byte (18%).
+- Authenticated OTA v0.6.1 sukses; versi/HTML sesuai source, STA kembali, OTA tertutup, program/box padam setelah reboot. Mapping25 box/75 LED serta warna B02 biru yang disimpan lewat popup bertahan melewati reboot OTA. Pola/render tidak berubah dari v0.6.0; pengamatan optik pola baru tetap memerlukan konfirmasi pengguna.
+
 ## v0.6.0 — popup, warna konfigurasi dan program otomatis, 2026-10-07
 
 - Jumlah LED rak terpisah dari popup box, dengan Simpan setting rak yang memakai mapping tersimpan dan tidak menyimpan draft mapping/jaringan lain. Popup menyediakan mapping/warna konfigurasi dan kontrol manual, dapat ditutup tombol/Escape/backdrop, serta keyboard focus trap. Kartu menampilkan warna tersimpan walaupun padam.
