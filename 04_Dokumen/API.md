@@ -66,3 +66,17 @@ Di kode JARVIS, import WarehouseClient dan panggil set_box. Tidak ada token API.
 Client memiliki timeout5 detik dan tidak mengikuti redirect. Kegagalan transport setelah write menghasilkan AmbiguousResult: hasil belum diketahui. Jangan retry otomatis; panggil status dan periksa box. Ini tidak memberikan exactly-once delivery.
 
 Status mencakup `hardware_tests` untuk empat output: output, on, remaining_ms, brightness, mode, color. Tes hardware tidak menulis flash. Perintah box baru membatalkan tes pada output box tersebut. All-off, simpan konfigurasi, reboot dan aktivasi OTA menghentikan tes.
+
+## Program otomatis (v0.6.0)
+
+`PUT /api/v1/program` menerima contoh:
+
+```json
+{"on":true,"pattern":"running","idle":false,"brightness":32,"step_ms":500,"duration_ms":30000}
+```
+
+Pola wajib salah satu `running`, `blink`, `rainbow`, `breathe`. Field opsional: idle boolean defaultfalse, brightness integer0..255 default32, step_ms integer100..5000 default500, duration_ms integer1000..3600000 default30000. Mode idle mengabaikan timer tetapi nilai duration_ms tetap divalidasi jika dikirim. `{"on":false}` menghentikan program, tanpa menghapus perintah box manual. Respons berupa status controller. Method lain405; input invalid400, driver unavailable503.
+
+Status memiliki `program`: on, idle, pattern, brightness efektif, step_ms, remaining_ms. Remaining0 berarti berkelanjutan hanya bila on=true dan idle=true. Box state menambah program_on serta program_color RGB yang sudah diskalakan brightness; field on/color/remaining_ms lama tetap menunjukkan perintah manual. Program berjalan pada mapping tersimpan, perintah manual aktif mendapat prioritas, hardware test menimpa output. All-off/config/OTA/reboot menghentikan program.
+
+Mapping box menambah `color:[r,g,b]` integer0..255, tersimpan di NVS sebagai warna konfigurasi. Field opsional untuk kompatibilitas schema1 lama; jika tidak ada, default hijau. API GET mengembalikan warna setiap box. Perintah nyala box tanpa color memakai warna konfigurasi box. Warna perintah eksplisit tidak menulis NVS.

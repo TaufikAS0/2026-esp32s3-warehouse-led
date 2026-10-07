@@ -28,6 +28,12 @@ void WebService::state(JsonObject out, size_t i, uint32_t now) {
   out["mode"] = s.blink ? "blink" : "steady";
   auto color = out["color"].to<JsonArray>();
   for (auto channel : s.color) color.add(channel);
+  const auto& program = leds_.program();
+  const bool automatic = program.boxLit(i, controller_, now) && !leds_.hardwareTests().remaining(controller_.config().boxes[i].output, now);
+  out["program_on"] = automatic;
+  const auto value = program.color(i, controller_.config(), now);
+  auto automaticColor = out["program_color"].to<JsonArray>();
+  automaticColor.add(value.r); automaticColor.add(value.g); automaticColor.add(value.b);
 }
 void WebService::status() {
   const uint32_t now = millis(); controller_.update(now);
@@ -37,6 +43,11 @@ void WebService::status() {
   doc["ap_ssid"] = wifi_.apName(); doc["led_driver_ready"] = leds_.ready();
   doc["storage_error"] = store_.loadError(); doc["ota_remaining_ms"] = ota_.remaining(now);
   doc["brightness_limit"] = controller_.config().brightnessLimit;
+  auto program = doc["program"].to<JsonObject>();
+  program["on"] = leds_.program().active(now); program["idle"] = leds_.program().idle();
+  program["pattern"] = Warehouse::patternName(leds_.program().pattern());
+  program["brightness"] = leds_.program().brightness(); program["step_ms"] = leds_.program().step();
+  program["remaining_ms"] = leds_.program().remaining(now);
   auto outputs = doc["outputs"].to<JsonArray>();
   for (auto count : controller_.config().ledCounts) outputs.add(count);
   auto tests = doc["hardware_tests"].to<JsonArray>();
@@ -134,13 +145,15 @@ void WebService::routeUnknown() {
     if (!Codec::decodeCommand(doc.as<JsonVariantConst>(), command, e)) { error(400, e); return; }
     if (!leds_.ready()) { error(503, "LED driver unavailable"); return; }
     const uint32_t now = millis();
+    if (command.on && doc["color"].isUnbound())
+      memcpy(command.color, controller_.config().boxes[i].color, sizeof(command.color));
     leds_.hardwareTests().cancel(controller_.config().boxes[i].output);
     controller_.set(i, command, now); controller_.update(now); leds_.update(controller_, now);
     JsonDocument response; state(response.to<JsonObject>(), i, now); send(200, response);
     return;
   }
   if (uri == "/api/v1/status" || uri == "/api/v1/boxes" || uri == "/api/v1/config" ||
-      uri == "/api/v1/all-off" || uri == "/api/v1/ota") error(405, "unsupported method");
+      uri == "/api/v1/all-off" || uri == "/api/v1/ota" || uri == "/api/v1/program") error(405, "unsupported method");
   else error(404, "endpoint not found");
 }
 void WebService::begin() {
@@ -155,6 +168,30 @@ void WebService::begin() {
   server_.on("/api/v1/boxes", HTTP_GET, [this] { boxes(); });
   server_.on("/api/v1/config", HTTP_GET, [this] { getConfig(); });
   server_.on("/api/v1/config", HTTP_PUT, [this] { putConfig(); });
+  server_.on("/api/v1/program", HTTP_PUT, [this] {
+    JsonDocument doc; if (!body(doc)) return;
+    if (!doc["on"].is<bool>()) { error(400, "on must be boolean"); return; }
+    if (!doc["on"].as<bool>()) { leds_.program().stop(); leds_.update(controller_, millis()); status(); return; }
+    const auto bounded = [&](const char* key, unsigned low, unsigned high) {
+      return doc[key].isUnbound() || (doc[key].is<unsigned>() && doc[key].as<unsigned>() >= low && doc[key].as<unsigned>() <= high);
+    };
+    if ((!doc["idle"].isUnbound() && !doc["idle"].is<bool>()) ||
+        !bounded("brightness", 0, 255) || !bounded("step_ms", 100, 5000) || !bounded("duration_ms", 1000, 3600000)) {
+      error(400, "invalid program idle/brightness/step_ms/duration_ms"); return;
+    }
+    if (!doc["pattern"].is<const char*>()) { error(400, "pattern required"); return; }
+    const String name = doc["pattern"].as<const char*>(); Warehouse::Pattern pattern;
+    if (name == "running") pattern = Warehouse::Pattern::Running;
+    else if (name == "blink") pattern = Warehouse::Pattern::Blink;
+    else if (name == "rainbow") pattern = Warehouse::Pattern::Rainbow;
+    else if (name == "breathe") pattern = Warehouse::Pattern::Breathe;
+    else { error(400, "unknown program pattern"); return; }
+    if (!leds_.ready()) { error(503, "LED driver unavailable"); return; }
+    leds_.hardwareTests().clear();
+    leds_.program().start(pattern, doc["idle"] | false, doc["brightness"] | 32u,
+                          doc["step_ms"] | 500u, doc["duration_ms"] | 30000u, controller_.config(), millis());
+    leds_.update(controller_, millis()); status();
+  });
   server_.on("/api/v1/all-off", HTTP_POST, [this] {
       controller_.allOff(); leds_.off(); JsonDocument doc; doc["ok"] = true; send(200, doc);
   });

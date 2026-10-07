@@ -12,6 +12,12 @@ int main() {
   Warehouse::Config decoded; String e;
   assert(Codec::decodeConfig(doc.as<JsonVariantConst>(), decoded, e));
   assert(!strcmp(decoded.boxes[0].id, "R01-B01") && decoded.boxes[0].start == 0);
+  doc["boxes"][0].remove("color");
+  assert(Codec::decodeConfig(doc.as<JsonVariantConst>(), decoded, e) && decoded.boxes[0].color[1] == 255);
+  auto color = doc["boxes"][0]["color"].to<JsonArray>(); color.add(1); color.add(2); color.add(255);
+  assert(Codec::decodeConfig(doc.as<JsonVariantConst>(), decoded, e) && decoded.boxes[0].color[2] == 255);
+  doc["boxes"][0]["color"][0] = true; assert(!Codec::decodeConfig(doc.as<JsonVariantConst>(), decoded, e));
+  doc["boxes"][0]["color"][0] = 1;
   doc["schema"] = true; assert(!Codec::decodeConfig(doc.as<JsonVariantConst>(), decoded, e));
   doc["schema"] = 1;
   for (const char* value : {"-1", "76", "1.5", "true", "null", "\"3\""}) {

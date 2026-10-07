@@ -3,6 +3,7 @@
 #include "domain.h"
 #include "hardware_test.h"
 #include "config.h"
+#include "animation_program.h"
 class LedDriver {
  public:
   bool begin();
@@ -10,6 +11,7 @@ class LedDriver {
   void off();
   bool ready() const { return ready_; }
   Warehouse::HardwareTests& hardwareTests() { return hardwareTests_; }
+  Warehouse::AnimationProgram& program() { return program_; }
  private:
   // The parameterized constructor initializes ESP32's shared RMT mutex.
   // The deprecated empty constructor + updateLength/setPin does not (NeoPixel 1.15.2).
@@ -21,4 +23,5 @@ class LedDriver {
   Warehouse::Pixel last_[4][75]{};
   bool ready_ = false;
   Warehouse::HardwareTests hardwareTests_;
+  Warehouse::AnimationProgram program_;
 };

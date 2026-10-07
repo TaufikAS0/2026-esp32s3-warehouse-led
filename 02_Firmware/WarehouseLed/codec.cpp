@@ -34,6 +34,15 @@ bool Codec::decodeConfig(JsonVariantConst root, Warehouse::Config& out, String& 
     dest.output = b["output"].as<unsigned>() - 1;
     dest.start = b["start_led"].as<unsigned>() - 1;
     dest.count = b["led_count"].as<unsigned>();
+    dest.color[0] = 0; dest.color[1] = 255; dest.color[2] = 0;
+    if (!b["color"].isUnbound()) {
+      const auto color = b["color"].as<JsonArrayConst>();
+      if (color.size() != 3) return fail("box color requires three integers");
+      for (size_t channel = 0; channel < 3; ++channel) {
+        if (!number(color[channel], 0, 255)) return fail("box color channels must be 0..255");
+        dest.color[channel] = color[channel].as<unsigned>();
+      }
+    }
   }
   const char* e = Warehouse::validate(out);
   return e ? fail(e) : true;
@@ -49,6 +58,7 @@ void Codec::encodeConfig(const Warehouse::Config& c, JsonObject out) {
     auto item = boxes.add<JsonObject>();
     item["id"] = b.id; item["name"] = b.name;
     item["output"] = b.output + 1; item["start_led"] = b.start + 1; item["led_count"] = b.count;
+    auto color = item["color"].to<JsonArray>(); for (auto channel : b.color) color.add(channel);
   }
 }
 bool Codec::decodeCommand(JsonVariantConst root, Warehouse::Command& out, String& error) {

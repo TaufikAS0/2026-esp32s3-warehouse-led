@@ -20,6 +20,8 @@ Controller memakai catu tetap; modem sleep dimatikan untuk mengurangi jeda HTTP/
 
 `hardware_test.h` menyimpan state tes per output tanpa flash, timer uint32 tahan rollover, brightness dibatasi global dan render mengikuti ledCounts. Driver menerapkan frame tes sesudah render box. API tes memadamkan state box pada rak itu sehingga tidak menyala kembali setelah expiry. Perintah box membatalkan tes output terkait; off/config/OTA menghapus seluruh tes.
 
+`animation_program.h` menangani running/blink/rainbow/breathe berbasis elapsed millis, mapping dan warna box, tanpa Wi-Fi/flash/GPIO. Driver merender manual terlebih dahulu, mengisi hanya box tanpa perintah aktif dengan animasi, lalu menimpa dengan hardware test output. Prioritas manual mencakup fase gelap blink. Idle tetap RAM dan mati setelah reboot. Stop program tidak menghapus state manual; LedDriver.off menghentikan animasi dan hardware tests. Field warna box opsional mempertahankan kompatibilitas schema1 NVS lama.
+
 `ota_service.*` mati setelah boot, hanya STA, autentikasi password unik, jendela 10 menit. Putus STA menutup OTA. Mengaktifkan OTA memadamkan LED. Transfer OTA adalah pemeliharaan, bukan operasi gudang normal; reboot tetap memadamkan state box.
 
 Provisioning mengaktifkan sumber entropy non-RF hanya saat pembuatan secret pertama sebelum Wi-Fi/ADC dijalankan, kemudian menonaktifkannya sebelum jaringan dimulai. Sesuai [panduan RNG ESP32-S3](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-reference/system/random.html).

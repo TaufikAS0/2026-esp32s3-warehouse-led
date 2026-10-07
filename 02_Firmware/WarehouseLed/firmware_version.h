@@ -1,3 +1,3 @@
 #pragma once
-#define WAREHOUSE_FIRMWARE_VERSION "v0.5.1"
+#define WAREHOUSE_FIRMWARE_VERSION "v0.6.0"
 namespace Firmware { constexpr const char* kVersion = WAREHOUSE_FIRMWARE_VERSION; }

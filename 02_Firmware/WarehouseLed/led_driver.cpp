@@ -10,6 +10,7 @@ bool LedDriver::begin() {
 }
 void LedDriver::off() {
   hardwareTests_.clear();
+  program_.stop();
   if (!ready_) return;
   for (size_t i = 0; i < 4; ++i) { strips_[i].clear(); strips_[i].show(); }
   memset(last_, 0, sizeof(last_));
@@ -19,6 +20,7 @@ void LedDriver::update(const Warehouse::Controller& controller, uint32_t now) {
   Warehouse::Pixel frame[75];
   for (size_t o = 0; o < 4; ++o) {
     controller.render(o, now, frame);
+    program_.render(o, controller, now, frame);
     hardwareTests_.render(o, controller.config(), now, frame);
     if (!memcmp(last_[o], frame, sizeof(frame))) continue;
     for (size_t p = 0; p < 75; ++p) strips_[o].setPixelColor(p, frame[p].r, frame[p].g, frame[p].b);

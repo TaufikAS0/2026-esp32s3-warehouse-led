@@ -1,5 +1,15 @@
 # Laporan verifikasi
 
+## v0.6.0 — popup, warna konfigurasi dan program otomatis, 2026-10-07
+
+- Jumlah LED rak terpisah dari popup box, dengan Simpan setting rak yang memakai mapping tersimpan dan tidak menyimpan draft mapping/jaringan lain. Popup menyediakan mapping/warna konfigurasi dan kontrol manual, dapat ditutup tombol/Escape/backdrop, serta keyboard focus trap. Kartu menampilkan warna tersimpan walaupun padam.
+- Field warna box optional pada schema1, default hijau untuk NVS lama. Running/kedip memakai warna tiap box; rainbow/breathe mengikuti mapping. Tes bertimer dan idle kontinu memakai RAM, brightness global, tanpa delay. Perintah manual aktif termasuk fase gelap blink mendapat prioritas; hardware test menimpa output. All-off/config/OTA/reboot menghentikan program.
+- Tes host lulus:11 Python, domain/transactions, actual NeoPixel driver, codec termasuk kompatibilitas warna lama/invalid/100 box, animasi mapping/timer/rollover/idle/manual priority, DOM100 slot/popup/Escape/save warna/output terpisah/draft preservation/program controls. Ini simulasi software, bukan pengukuran RMT fisik.
+- Build final core3.3.10 / NeoPixel1.15.2 / ArduinoJson7.4.2, S3 UART,4MB, PSRAM off: flash1063993/1310720 byte (81%), RAM61500/327680 byte (18%). Warning initializer hanya ditemukan pada dependency core pada build awal; build final cached lulus.
+- Authenticated OTA v0.6.0 berhasil. Reboot kembali STA, OTA tertutup, seluruh box/program padam. Mapping aktif25 box /75 LED Rak1 dan jaringan lama tetap tersimpan; warna lama mendapat default hijau. Root HTML cocok persis dengan source.
+- HTTP perangkat nyata: empat pola, finite expiry, idle melampaui durasi tes, global brightness clamp, invalid type/pattern/range400, manual blink priority, stop program mempertahankan manual, all-off dan konfigurasi tidak berubah selama tes lulus.
+- Chrome perangkat nyata setelah OTA: v0.6.0 LIVE, popup B02, Simpan box warna biru, warna #0000FF bertahan setelah reload, mapping25 box tetap. Tes running60 detik dijalankan dari browser. Warna B02 sengaja menjadi biru; mapping/jaringan lain dipertahankan. Pengamatan optik pola baru dicatat terpisah dari status HTTP. Endurance, empat output simultan serta listrik tetap belum disertifikasi.
+
 ## v0.5.1 — perbaikan driver tanpa keluaran LED, 2026-10-06
 
 - Pengguna melaporkan LED tidak menyala pada firmware gudang, tetapi program pembanding `esp32s3-ws2812b-web` berhasil pada rangkaian yang sama. Kedua program memakai GPIO4 dan GRB/800 kHz.

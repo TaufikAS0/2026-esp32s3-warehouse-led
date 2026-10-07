@@ -1,6 +1,6 @@
 # Dashboard dan tes manual
 
-Dashboard memakai warna slate/cyan, empat panel rak dengan25 posisi per rak, dan panel kontrol box. Layout5×5 adalah urutan tampilan, bukan konfirmasi susunan fisik rak. Pada ponsel, Rak1 dipilih saat membuka halaman; gunakan filter untuk berpindah rak atau melihat semuanya.
+Dashboard memakai warna slate/cyan dan empat panel rak dengan25 posisi per rak. Klik box membuka popup konfigurasi/kontrol; tutup memakai tombol Tutup, Escape atau area gelap. Warna konfigurasi tersimpan ditampilkan sebagai titik warna dan kode hex pada kartu, termasuk saat padam. Layout5×5 adalah urutan tampilan, bukan konfirmasi susunan fisik rak. Pada ponsel, gunakan filter untuk berpindah rak atau melihat semuanya.
 
 ## Masuk
 
@@ -17,7 +17,9 @@ Tes menghentikan box aktif pada rak yang diuji; rak lain tetap berjalan. Padam p
 
 ## Tes awal tiga LED
 
-Semua posisi box dapat diklik, termasuk slot abu-abu. Klik membuka editor langsung untuk ID, nama, output/rak, LED awal dan jumlah LED box. Isi jumlah LED terpasang sesuai hardware, lalu tekan **Simpan box**. Mapping baru harus disimpan sebelum tombol tes dapat dipakai. Simpan memadamkan seluruh box dan mempertahankan konfigurasi box lain serta Wi-Fi. Jika ada draft di halaman Konfigurasi, simpan atau buang draft tersebut dahulu.
+Atur jumlah LED rak terlebih dahulu di **Konfigurasi → Output hardware → Simpan setting rak**. Ini memakai mapping tersimpan dan tidak mengubah mapping box. Mengurangi jumlah LED di bawah rentang box yang sudah tersimpan ditolak. Draft mapping/jaringan lain tidak ikut disimpan.
+
+Semua posisi box dapat diklik, termasuk slot abu-abu. Popup menyediakan ID, nama, output/rak, LED awal, jumlah LED box dan warna konfigurasi. Jumlah LED rak tampil sebagai informasi; tersedia tombol menuju setting rak. **Simpan box** hanya mengubah box terpilih, memadamkan seluruh LED/program dan mempertahankan box lain serta Wi-Fi. Mapping baru harus disimpan sebelum tes. Jika ada draft di halaman Konfigurasi, simpan atau buang draft tersebut dahulu. Contoh B02 memakai LED4–6 sehingga jumlah LED Rak1 minimal6.
 
 Untuk box yang sudah tersimpan, klik box lalu gunakan Tes warna cepat atau Nyalakan LED box. Perintah tes memakai mapping tersimpan; perubahan pada field editor baru diterapkan setelah Simpan box. Slot dengan ID Rxx-Bxx mengikuti nomor B pada rak tersebut; ID custom menempati posisi kosong menurut urutan mapping.
 
@@ -28,6 +30,14 @@ Untuk box yang sudah tersimpan, klik box lalu gunakan Tes warna cepat atau Nyala
 5. Untuk menguji alamat secara terpisah, gunakan draft Tes tiap LED:3 box /1 LED, lalu Simpan. B01/B02/B03 menunjuk LED1/2/3. Setelah selesai, kembalikan Setup1 box /3 LED dan Simpan.
 
 Box aktif ditandai warna, label status dan sisa timer. Box terpilih memiliki outline cyan. Slot belum dikonfigurasi tidak dapat dinyalakan. Jumlah box terkonfigurasi berbeda dari kapasitas100 slot. API memberi status perintah firmware; LED fisik tetap harus diamati langsung.
+
+## Program otomatis dan idle
+
+Panel di atas peta menyediakan Running box, Kedip bergilir, Pelangi mengalir dan Napas warna. Running/kedip mengikuti urutan mapping tersimpan; semua LED dalam box menyala bersama memakai warna konfigurasi box. Pelangi/napas bekerja pada semua box yang terpetakan. LED yang belum bermapping tetap padam; gunakan tes hardware rak untuk LED tersebut.
+
+Brightness default32 dibatasi batas global. Waktu langkah100–5000 ms mengatur kecepatan running/kedip dan setengah siklus napas. Pelangi bergeser tiap30 ms. Tes default30 detik dapat diatur1–3600 detik. **Jalankan sebagai idle** berjalan terus sampai dihentikan; tidak otomatis hidup setelah reboot. Status menunjukkan TES/IDLE dan pola aktif; kartu yang diterangi program diberi label PROGRAM.
+
+Perintah manual/JARVIS yang masih aktif mendapat prioritas pada box yang sama, termasuk fase gelap blink; setelah timer habis, box mengikuti program lagi. Tes hardware rak menimpa animasi pada output itu. Hentikan program hanya mematikan animasi; perintah manual tetap berjalan. Padamkan semua, simpan konfigurasi, reboot dan aktivasi OTA menghentikan seluruh program/LED. Animasi berjalan lokal tanpa delay dan tidak menulis flash.
 
 ## Menambah rak
 

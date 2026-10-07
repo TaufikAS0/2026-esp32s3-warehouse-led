@@ -14,6 +14,7 @@ struct Box {
   uint8_t output = 0; // Internal zero-based output.
   uint8_t start = 0;  // Internal zero-based LED.
   uint8_t count = 3;
+  uint8_t color[3] = {0, 255, 0}; // Saved display/animation color; commands remain transient.
 };
 struct Config {
   uint8_t ledCounts[kOutputs] = {3, 0, 0, 0};
