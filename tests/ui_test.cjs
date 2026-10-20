@@ -1,0 +1,213 @@
+// Execute the real embedded HTML/JS in an isolated DOM with a synthetic HTTP fixture.
+// This is a UI test, not ESP32 WebServer or hardware validation.
+const {JSDOM} = require('../_sandbox/ui-tests/node_modules/jsdom');
+const fs = require('node:fs');
+const path = require('node:path');
+const assert = require('node:assert/strict');
+const source = fs.readFileSync(path.join(__dirname, '../02_Firmware/WarehouseLed/web_ui.h'), 'utf8');
+const version=fs.readFileSync(path.join(__dirname,'../02_Firmware/WarehouseLed/firmware_version.h'),'utf8').match(/#define WAREHOUSE_FIRMWARE_VERSION "([^"]+)"/)[1];
+const buildUtc='2026-01-01T00:00:00Z';
+const html = source.replace(')HTML" WAREHOUSE_FIRMWARE_VERSION R"HTML(',version).replace(')HTML" WAREHOUSE_BUILD_UTC R"HTML(',buildUtc).split('R"HTML(')[1].split(')HTML"')[0];
+assert.doesNotMatch(html, /â|Ã|Â/, 'UTF-8 labels must not contain mojibake');
+const clone = obj => JSON.parse(JSON.stringify(obj));
+let config = {schema:1, revision:0, brightness_limit:128, outputs:[3,0,0,0],
+  boxes:[{id:'R01-B01',name:'Rak 1 Box 1',output:1,start_led:1,led_count:3}],wifi:{ssid:'',password_configured:false}};
+let program = {on:false}, hardwareTests = [], states = new Map(), calls = [], poll, failStatus=false, failSave=false;
+const profiles=new Map();let nextProfileRevision=1,exportedBlob;
+const dom = new JSDOM(html, {url:'http://warehouse-fixture.test/', runScripts:'dangerously', pretendToBeVisual:true,
+  beforeParse(window) {
+    window.AbortController = global.AbortController;
+     window.URL.createObjectURL=blob=>{exportedBlob=blob;return 'blob:fixture';};
+     window.URL.revokeObjectURL=()=>{};
+     window.HTMLAnchorElement.prototype.click=function(){};
+    window.setInterval = callback => { poll = callback; return 1; };
+    window.fetch = async (url, options) => {
+      const payload = options.body ? JSON.parse(options.body) : undefined;
+      calls.push({url,method:options.method,payload});
+      assert.equal(options.headers.Authorization,undefined);
+      let result;
+      if(url.endsWith('/config') && options.method==='PUT') {
+         if(payload.revision!==config.revision)return {ok:false,status:409,json:async()=>({error:'configuration changed'})};
+        if(failSave)return {ok:false,status:503,json:async()=>({error:'storage write failed'})};
+        const seen=new Set(), occupied=new Set();
+        for(const box of payload.boxes) {
+          if(seen.has(box.id)) return {ok:false,status:400,json:async()=>({error:'duplicate box ID'})};
+          seen.add(box.id);
+          for(let i=box.start_led;i<box.start_led+box.led_count;i++) {
+            const key=box.output+':'+i;
+            if(occupied.has(key)) return {ok:false,status:400,json:async()=>({error:'overlapping box mapping'})};
+            occupied.add(key);
+          }
+        }
+         config={...clone(payload),revision:config.revision+1,wifi:payload.wifi||config.wifi};config.wifi.password_configured=false;states.clear();program={on:false};result=config;
+      } else if(url.endsWith('/config')) result=config;
+       else if(url.includes('/profiles')) {
+         const parts=url.split('/');const id=Number(parts[4]),apply=parts[5]==='apply';
+         if(!id&&options.method==='GET')result={capacity:5,profiles:[...profiles.values()].map(p=>({id:p.id,name:p.name,box_count:p.config.boxes.length,profile_revision:p.profile_revision,valid:true}))};
+         else if(apply){if(payload.revision!==config.revision||payload.profile_revision!==profiles.get(id).profile_revision)return {ok:false,status:409,json:async()=>({error:'changed'})};config={...clone(profiles.get(id).config),revision:config.revision+1,wifi:config.wifi};states.clear();program={on:false};result=config;}
+         else if(options.method==='GET')result=profiles.get(id);
+         else if(options.method==='DELETE'){profiles.delete(id);result={ok:true};}
+         else{const slot=id||[1,2,3,4,5].find(n=>!profiles.has(n));if(!slot)return {ok:false,status:409,json:async()=>({error:'full'})};result={...clone(payload),id:slot,profile_revision:nextProfileRevision++};profiles.set(slot,result);}
+       }
+      else if(url.endsWith('/status')) {if(failStatus)throw new TypeError('Network disconnected');result={version,ip:'fixture',sta_connected:true,ap_active:false,
+         build_utc:buildUtc,config_revision:config.revision,
+        ap_ssid:'Warehouse-fixture',outputs:config.outputs,brightness_limit:config.brightness_limit,
+        ota_remaining_ms:0,storage_error:'',program,hardware_tests:hardwareTests,boxes:config.boxes.map(b=>states.get(b.id)||
+          {id:b.id,on:false,remaining_ms:0,color:[0,255,0],brightness:128,mode:'steady'})};}
+      else if(url.endsWith('/all-off')) {states.clear();program={on:false};result={ok:true};}
+       else if(url.endsWith('/program')) {states.clear();hardwareTests=[];program={...payload,output:1,start_led:1,end_led:config.outputs[0],cycle_ms:1500,position:1,total:3,remaining_ms:payload.idle?0:payload.duration_ms};result={program};}
+      else if(url.includes('/outputs/') && url.endsWith('/test')) {const output=Number(url.split('/').at(-2));result={output,on:payload.on,remaining_ms:payload.on?payload.duration_ms:0,brightness:Math.min(payload.brightness,config.brightness_limit)};hardwareTests=[result];}
+      else if(url.endsWith('/state')) {
+        const id=url.split('/').at(-2);result={...payload,id,remaining_ms:payload.on?payload.duration_ms:0,
+          brightness:Math.min(payload.brightness||128,config.brightness_limit)};
+        states.set(id,result);
+      } else if(url.endsWith('/ota')) result={remaining_ms:payload.enabled?600000:0};
+      else throw new Error('Unexpected test request '+url);
+      return {ok:true,status:200,json:async()=>clone(result)};
+    };
+  }});
+const document=dom.window.document, $=id=>document.getElementById(id);
+const settle=async()=>{for(let i=0;i<6;i++)await new Promise(resolve=>setImmediate(resolve));};
+async function click(id){$(id).click();await settle();}
+async function main(){
+  assert.equal($('version').textContent,'Firmware '+version+' • Build UTC '+buildUtc);
+  await settle();assert.equal(document.querySelector('#token'),null);
+  assert.equal($('mapping').children.length,1);assert.equal($('box-grid').children.length,4);
+  assert.equal(document.querySelectorAll('.box').length,100);
+  assert.equal(document.querySelectorAll('.box.placeholder:disabled').length,0);
+  assert.equal($('turn-on').disabled,true);
+  assert.equal($('rack-test-red-2').disabled,true);await click('rack-test-red-1');assert.equal(hardwareTests[0].output,1);assert.equal(hardwareTests[0].remaining_ms,3000);assert.match($('rack-test-state-1').textContent,/Tes hardware/);await click('rack-test-off-1');assert.equal(hardwareTests[0].on,false);
+  document.querySelector('[data-box-id="A-02"]').click();await settle();
+  assert.equal($('selected-id').textContent,'A-02');assert.equal($('box-start').value,'4');
+  assert.equal($('turn-on').disabled,true);
+  await click('save-box');assert.match($('message').textContent,/rentang melebihi/);assert.equal(config.boxes.length,1);
+  assert.equal($('box-installed'),null);assert.equal($('box-modal').hidden,false);
+  await click('close-box');assert.equal($('box-modal').hidden,true);
+  $('output-0').value=6;await click('save-outputs');assert.equal(config.outputs[0],6);assert.equal(config.boxes.length,1);
+  document.querySelector('[data-box-id="A-02"]').click();await settle();
+  $('box-color').value='#0000ff';await click('save-box');assert.equal(config.boxes.length,2);
+  assert.deepEqual(config.boxes[1].color,[0,0,255]);
+  assert.match(document.querySelector('[data-box-id="A-02"] .box-color').textContent,/#0000FF/);
+  assert.equal(config.outputs[0],6);assert.equal($('turn-on').disabled,false);
+  await click('test-green');assert.deepEqual(states.get('A-02').color,[0,255,0]);
+  $('box-id').value='R01-B01';await click('save-box');assert.match($('message').textContent,/duplicate box ID/);
+  assert.equal(config.boxes[1].id,'A-02');assert.equal(states.get('A-02').on,true);
+  $('box-id').value='CUSTOM-02';$('box-name').value='Box spare';await click('save-box');
+  assert.equal($('selected-id').textContent,'CUSTOM-02');assert.equal(config.boxes[1].name,'Box spare');
+  await click('test-blue');assert.equal(states.get('CUSTOM-02').on,true);
+  $('box-start').value=2;await click('save-box');assert.match($('message').textContent,/overlapping/);
+  assert.equal(config.boxes[1].start_led,4);
+  $('box-start').value=4;$('box-name').value='Unsaved';failSave=true;
+  await click('save-box');assert.match($('message').textContent,/storage write failed/);
+  assert.equal(config.boxes[1].name,'Box spare');assert.equal(states.get('CUSTOM-02').on,true);
+  assert.equal($('box-name').value,'Unsaved');failSave=false;
+  $('limit').dispatchEvent(new dom.window.Event('input'));await click('save-box');
+  assert.match($('message').textContent,/global memiliki draft/);await click('reload');
+  await click('setup-three');await click('save');
+  $('rack-count').value=4;$('boxes-per-rack').value=25;await click('generate');
+  assert.equal($('mapping').children.length,100);
+  assert.deepEqual(Array.from($('output-inputs').querySelectorAll('input')).map(x=>x.value),['75','75','75','75']);
+  assert.deepEqual(Array.from($('mapping').lastChild.querySelectorAll('input')).map(x=>x.value),['D-25','-','4','73','3','#4cd7f6']);
+  assert.equal(config.boxes.length,1); // Draft generator does not write config.
+  await click('save');assert.equal(config.boxes.length,100);assert.equal(document.querySelectorAll('.box:not(.placeholder)').length,100);
+  $('search').value='D-25';$('search').dispatchEvent(new dom.window.Event('input'));
+  assert.equal(document.querySelectorAll('.box:not([hidden])').length,1);
+  const card=document.querySelector('[data-box-id="D-25"]');
+  card.click();await settle();assert.equal($('selected-id').textContent,'D-25');
+  assert.equal($('selected-leds').textContent,'73–75 (3 LED)');
+  $('brightness').value=255;$('seconds').value=5;$('mode').value='blink';$('color').value='#ff0010';
+  await click('turn-on');assert.match($('message').textContent,/brightness efektif 128/);
+  assert.deepEqual(states.get('D-25').color,[255,0,16]);
+  assert.equal(states.get('D-25').duration_ms,5000);
+  assert.equal(states.get('D-25').mode,'blink');
+  await poll();assert.equal(document.querySelector('[data-box-id="D-25"]'),card);
+  assert.equal($('selected-id').textContent,'D-25');assert.equal($('turn-on').disabled,false);
+  for(const [button,color] of [['test-red',[255,0,0]],['test-green',[0,255,0]],['test-blue',[0,0,255]]]){
+    await click(button);assert.deepEqual(states.get('D-25').color,color);
+    assert.equal(states.get('D-25').duration_ms,3000);
+  }
+  await click('test-blink');assert.equal(states.get('D-25').mode,'blink');assert.equal(states.get('D-25').duration_ms,3000);
+  failStatus=true;await poll();assert.equal($('turn-on').disabled,true);
+  assert.match($('selected-state').textContent,/Data terakhir/);
+  failStatus=false;await poll();assert.equal($('turn-on').disabled,false);
+  assert.doesNotMatch($('message').textContent,/Status tidak tersedia/);
+  assert.match($('message').textContent,/Koneksi kembali terhubung/);
+  // A rejected save preserves device config and active state while keeping the visible draft.
+  const rows=$('mapping').children;
+  rows[1].querySelector('[data-field=id]').value='A-01';
+  await click('save');assert.match($('message').textContent,/duplicate box ID/);
+  assert.equal(config.boxes[1].id,'A-02');assert.equal(states.get('D-25').on,true);
+  await click('all-off');assert.equal(states.size,0);
+  await click('reload');assert.equal(rows[1].querySelector('[data-field=id]').value,'A-02');
+  $('rack-count').value=1;$('boxes-per-rack').value=25;$('leds-per-box').value=4;
+  await click('generate');assert.match($('message').textContent,/melebihi 75/);assert.equal($('mapping').children.length,100);
+  await click('setup-three');assert.equal($('mapping').children.length,1);assert.equal(config.boxes.length,100);
+  await click('save');assert.equal(config.boxes.length,1);assert.equal(document.querySelectorAll('.box.placeholder').length,99);
+  await click('setup-individual');assert.equal($('mapping').children.length,3);assert.equal(config.boxes.length,1);
+  await click('save');assert.deepEqual(config.boxes.map(b=>[b.start_led,b.led_count]),[[1,1],[2,1],[3,1]]);
+  await click('nav-map');assert.equal($('map-page').hidden,false);assert.equal($('config-page').hidden,true);
+  $('search').value='';$('search').dispatchEvent(new dom.window.Event('input'));
+  $('rack-filter').value='1';$('rack-filter').dispatchEvent(new dom.window.Event('change'));
+  assert.equal(document.querySelectorAll('.rack:not([hidden])').length,1);
+  assert.equal(dom.window.sessionStorage.length,0);
+  await click('program-test');assert.equal(program.pattern,'running');assert.equal(program.idle,false);assert.equal(program.duration_ms,30000);
+  $('program-pattern').value='breathe';await click('program-idle');assert.equal(program.idle,true);assert.match($('program-state').textContent,/IDLE/);
+  await click('program-stop');assert.equal(program.on,false);
+  await click('program-idle');await click('all-off');assert.equal(program.on,false);
+  document.querySelector('[data-box-id="A-01"]').click();await settle();
+  assert.equal($('box-modal').hidden,false);
+  document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape'}));assert.equal($('box-modal').hidden,true);
+  $('mapping').children[0].querySelector('[data-field=name]').value='Draft label';
+  $('output-0').value=6;await click('save-outputs');
+  assert.equal(config.boxes[0].name,'-');
+  assert.equal($('mapping').children[0].querySelector('[data-field=name]').value,'Draft label');
+  assert.equal($('config-state').textContent,'Draft belum disimpan');
+
+  await click('reload');await click('close-box');
+  // Save a complete generated mapping as a profile without applying it.
+  $('rack-count').value=4;$('boxes-per-rack').value=25;$('leds-per-box').value=3;await click('generate');
+  const beforeProfile=clone(config);$('profile-name').value='Gudang penuh';await click('profile-new');
+  assert.equal(profiles.size,1);assert.deepEqual(config,beforeProfile);
+  assert.equal(profiles.get(1).config.boxes.length,100);
+  assert.equal(profiles.get(1).config.boxes[99].id,'D-25');
+  assert.deepEqual(profiles.get(1).config.boxes[0].color,[76,215,246]);
+  assert.equal(profiles.get(1).config.boxes[0].name,'-');
+  assert.equal(profiles.get(1).config.wifi,undefined);assert.equal(profiles.get(1).config.revision,undefined);
+  await click('profile-apply');assert.deepEqual(config,beforeProfile); // unsaved draft blocks apply
+  await click('reload');await click('profile-apply');assert.equal(config.boxes.length,100);
+  // Export contains neither Wi-Fi nor device/runtime state.
+  await click('profile-export');
+  const exported=await new Promise(resolve=>{const reader=new dom.window.FileReader();reader.onload=()=>resolve(JSON.parse(reader.result));reader.readAsText(exportedBlob);});
+  assert.deepEqual(Object.keys(exported).sort(),['config','format','name']);
+  assert.equal(exported.config.wifi,undefined);
+  // External update: clean UI refreshes, dirty mapping and popup are preserved.
+  config={...config,revision:config.revision+1,brightness_limit:100};await poll();
+  assert.equal($('limit').value,'100');
+  $('mapping').children[0].querySelector('[data-field=name]').value='DO NOT LOSE';
+  $('mapping').children[0].querySelector('[data-field=name]').dispatchEvent(new dom.window.Event('input'));
+  config={...config,revision:config.revision+1,brightness_limit:90};await poll();
+  assert.equal($('mapping').children[0].querySelector('[data-field=name]').value,'DO NOT LOSE');
+  assert.match($('message').textContent,/Draft dipertahankan/);
+  const beforeConflict=config.revision;await click('save');assert.equal(config.revision,beforeConflict);
+  await click('reload');document.querySelector('[data-box-id="A-01"]').click();await settle();
+  $('box-name').value='POPUP DRAFT';$('box-name').dispatchEvent(new dom.window.Event('input'));
+  config={...config,revision:config.revision+1};await poll();assert.equal($('box-name').value,'POPUP DRAFT');
+  await click('reload');await click('close-box');
+  await click('profile-draft');assert.equal($('config-state').textContent,'Draft belum disimpan');
+  await click('reload');
+  // Import is a draft and preserves the network. Invalid imports do not replace it.
+  const imported={format:1,name:'Imported',config:clone(exported.config)};
+  Object.defineProperty($('profile-import'),'files',{configurable:true,value:[{size:500,text:async()=>JSON.stringify(imported)}]});
+  const importBefore=clone(config);$('profile-import').dispatchEvent(new dom.window.Event('change'));await settle();
+  assert.deepEqual(config,importBefore);assert.equal($('profile-name').value,'Imported');
+  assert.equal($('config-state').textContent,'Draft belum disimpan');
+  await click('reload');
+  imported.config.wifi={ssid:'must-not-import'};
+  $('profile-import').dispatchEvent(new dom.window.Event('change'));await settle();
+  assert.match($('message').textContent,/tanpa jaringan/);assert.deepEqual(config,importBefore);
+  $('profile-list').value='1';$('profile-list').dispatchEvent(new dom.window.Event('change'));await settle();
+  $('profile-name').value='Replaced';await click('profile-update');assert.equal(profiles.get(1).name,'Replaced');
+  await click('profile-delete');assert.equal(profiles.size,0);assert.equal(config.boxes.length,100);
+  dom.window.close();console.log('UI DOM tests passed: open LAN auto-load, four racks/100 slots, selection, manual RGB/blink, stale status, mapping draft/save, limits');
+}
+main().catch(error=>{console.error(error);dom.window.close();process.exitCode=1;});
