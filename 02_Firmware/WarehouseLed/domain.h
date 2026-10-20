@@ -33,6 +33,7 @@ struct State : Command { uint32_t startedMs = 0; };
 struct Pixel { uint8_t r = 0, g = 0, b = 0; };
 
 inline void setDefaults(Config& c) {
+  c.boxes[0] = Box{};
   c.ledCounts[0] = 3;
   for (size_t o = 1; o < kOutputs; ++o) c.ledCounts[o] = 0;
   c.brightnessLimit = 128; c.boxCount = 1;

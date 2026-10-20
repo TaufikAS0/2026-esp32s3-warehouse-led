@@ -15,3 +15,7 @@
 - Do not automatically flash hardware or change existing projects.
 
 - User-approved v0.5.0 behavior: LAN web and HTTP API are open, without bearer/login. Do not reintroduce API authentication unless requested. OTA upload password remains required. Firmware version must be visible before API connection.
+
+- v0.7.0: tests/idle are exclusive to one rack (at most75 LEDs), ordered by output/start LED. Manual requests cancel tests. Clear retiring outputs before lighting another rack, including4->1.
+- Preserve legacy IDs/config/credentials. Profiles contain mapping/colors/output counts/brightness only; never Wi-Fi or secrets. All config writes require current revision.
+- Use scripts/build.ps1 for generated UTC/nonce, binary/partition gates and SHA-256 manifest. Generated lab headers and artifacts stay ignored/private.

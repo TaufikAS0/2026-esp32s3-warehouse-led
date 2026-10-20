@@ -1,54 +1,67 @@
-# Dashboard dan tes manual
+# Operator dashboard v0.7.0
 
-Dashboard memakai warna slate/cyan dan empat panel rak dengan25 posisi per rak. Klik box membuka popup konfigurasi/kontrol; tutup memakai tombol Tutup, Escape atau area gelap. Warna konfigurasi tersimpan ditampilkan sebagai titik warna dan kode hex pada kartu, termasuk saat padam. Layout5×5 adalah urutan tampilan, bukan konfirmasi susunan fisik rak. Pada ponsel, gunakan filter untuk berpindah rak atau melihat semuanya.
+Buka IP controller, tanpa login/token. Versi dan build UTC tampil pada header.
+Status layar adalah perintah firmware, bukan konfirmasi nyala optik.
 
-## Masuk
+## Generator dan mapping
 
-1. Hubungkan controller ke router melalui Konfigurasi. SSID/password tersimpan di NVS dan dipakai otomatis setelah boot. Jangan memasukkan kredensial router ke source.
-2. Buka alamat IP controller. IP dapat dibaca melalui USB115200 dengan perintah `info`.
-3. Mapping dimuat otomatis tanpa login/token. Versi firmware terlihat pada header bahkan sebelum koneksi API selesai. Muat ulang koneksi mengulangi pembacaan controller.
-4. Koneksi putus menandai status sebagai data terakhir dan menonaktifkan perintah nyala sampai status berhasil dibaca lagi.
+Di Konfigurasi pilih jumlah rak1–4, box/rak1–25 dan LED/box (default3).
+Buat draft mapping menghasilkan A-01..A-25/output1, B/output2, C/output3, D/output4;
+LED tiap rak dimulai1,4,7,..73; label "-" dan warna #4cd7f6.
+Generator tidak langsung menyimpan/menyalakan. Edit draft lalu Simpan konfigurasi.
+Simpan memadamkan seluruh LED/program; ID baru perlu disamakan dengan pemanggil JARVIS.
+ID lama/custom tetap diterima, tidak diubah otomatis.
 
-## Tes hardware per rak
+Jumlah LED rak tetap terpisah dari popup box. Simpan setting rak memakai mapping tersimpan,
+menjaga draft mapping/jaringan lain. Mengurangi kapasitas di bawah mapping ditolak.
+Klik kartu membuka popup mapping/warna dan tes manual. Simpan box mempertahankan box lain/jaringan.
+Nama/warna tersimpan terlihat saat padam; hasil generator tetap bisa diedit.
 
-Di bawah grid setiap rak, isi brightness tes (default32), pilih warna custom atau tekan Merah/Hijau/Biru/Putih/Kedip. Seluruh LED1 sampai jumlah LED terpasang pada rak tersebut menyala selama3 detik, termasuk LED yang belum dipetakan ke box. Rak dengan jumlah LED0 menonaktifkan tes; isi jumlah terpasang di Konfigurasi lalu Simpan dahulu. Jumlah ini adalah pengaturan manual, bukan hasil autodetection.
+## Lima profil ESP dan cadangan file
 
-Tes menghentikan box aktif pada rak yang diuji; rak lain tetap berjalan. Padam pada panel rak, Padamkan semua, simpan konfigurasi dan aktivasi OTA menghentikan tes. Nyala layar/status API menunjukkan perintah firmware, bukan konfirmasi optik. Tes tidak menulis flash.
+1. Siapkan draft atau konfigurasi yang ingin disimpan.
+2. Isi nama, tekan Simpan draft sebagai profil baru. Ini tidak menerapkan config.
+3. Pilih profil untuk preview: nama, jumlah box, LED/rak, brightness dan contoh ID.
+4. Muat sebagai draft untuk mengedit dahulu, atau Terapkan profil terpilih.
+5. Terapkan memadamkan seluruh output/program dan menyimpan mapping, tanpa mengganti jaringan.
+6. Perbarui profil dari draft mengganti profil terpilih. Hapus tidak menghapus config aktif.
 
-## Tes awal tiga LED
+Profil berisi mapping/warna/jumlah LED/batas brightness, tanpa password/Wi-Fi/OTA/state nyala.
+Maksimal5 profil pada ESP,100 box/profil; nama unik1–48 byte UTF-8, case-sensitive.
+Ekspor JSON mengekspor profil terpilih, atau draft jika tidak ada profil terpilih.
+Impor JSON membuka draft, tidak langsung menyimpan ke ESP atau menerapkan.
+Simpan file cadangan sebanyak yang diperlukan di HP/laptop. Slot rusak dapat dihapus atau diperbarui.
 
-Atur jumlah LED rak terlebih dahulu di **Konfigurasi → Output hardware → Simpan setting rak**. Ini memakai mapping tersimpan dan tidak mengubah mapping box. Mengurangi jumlah LED di bawah rentang box yang sudah tersimpan ditolak. Draft mapping/jaringan lain tidak ikut disimpan.
+Draft yang ada harus diekspor/disimpan atau dibuang sebelum memuat/impor/menerapkan profil lain.
+Jika config berubah dari klien lain, draft dipertahankan dan Simpan ditolak sampai muat ulang.
+Buang draft / muat ulang adalah tindakan eksplisit membuang draft dan menutup popup.
+Muat ulang koneksi mempertahankan draft yang belum disimpan.
 
-Semua posisi box dapat diklik, termasuk slot abu-abu. Popup menyediakan ID, nama, output/rak, LED awal, jumlah LED box dan warna konfigurasi. Jumlah LED rak tampil sebagai informasi; tersedia tombol menuju setting rak. **Simpan box** hanya mengubah box terpilih, memadamkan seluruh LED/program dan mempertahankan box lain serta Wi-Fi. Mapping baru harus disimpan sebelum tes. Jika ada draft di halaman Konfigurasi, simpan atau buang draft tersebut dahulu. Contoh B02 memakai LED4–6 sehingga jumlah LED Rak1 minimal6.
+## Tes otomatis dan hardware
 
-Untuk box yang sudah tersimpan, klik box lalu gunakan Tes warna cepat atau Nyalakan LED box. Perintah tes memakai mapping tersimpan; perubahan pada field editor baru diterapkan setelah Simpan box. Slot dengan ID Rxx-Bxx mengikuti nomor B pada rak tersebut; ID custom menempati posisi kosong menurut urutan mapping.
+Semua tes/idle eksklusif satu rak, maksimum75 LED terpasang.
+Mulai tes memadamkan manual/tes sebelumnya. Perintah manual berikutnya menghentikan tes.
+Running/kedip mengikuti LED awal meningkat pada output1..4, bukan nama/urutan baris config.
+Running satu box per langkah; kedip setengah langkah nyala dan setengah padam.
+Pelangi berspektrum menurut posisi pixel fisik selama6×waktu langkah/rak.
+Napas memakai warna config dan naik-turun brightness selama2×waktu langkah/rak.
+Rak tanpa mapping dilewati; LED tanpa mapping hitam.
 
-1. Buka Konfigurasi → Setup1 box /3 LED → Simpan konfigurasi. Generator hanya membuat draft; Simpan memadamkan seluruh box dan menerapkan mapping.
-2. Buka Peta rak & box → pilih B01 pada Rak1. Lokasi harus menunjukkan GPIO4, LED1–3.
-3. Tekan Merah, Hijau, atau Biru pada bagian Tes warna cepat. Setiap tes berlangsung3 detik, memakai brightness yang dipilih serta batas global.
-4. Tes kedip3 detik memakai periode1 detik. Untuk nyala lebih lama, pilih warna, brightness, mode dan durasi, lalu Nyalakan LED box. Padamkan box atau Padamkan semua menghentikan perintah.
-5. Untuk menguji alamat secara terpisah, gunakan draft Tes tiap LED:3 box /1 LED, lalu Simpan. B01/B02/B03 menunjuk LED1/2/3. Setelah selesai, kembalikan Setup1 box /3 LED dan Simpan.
+Status program menunjukkan rak aktif, rentang LED, posisi box dan durasi satu putaran.
+Durasi tes adalah batas total; bila lebih pendek dari satu putaran, tidak semua rak akan dites.
+Idle mengulang sampai dihentikan; tidak aktif lagi setelah reboot.
+Preview rainbow popup memakai warna per pixel, kartu memakai warna pixel pertama.
+Tes hardware rak mencakup seluruh LED terpasang termasuk tanpa mapping, default3detik.
+Perpindahan rak memadamkan rak lama sebelum menyalakan rak baru.
 
-Box aktif ditandai warna, label status dan sisa timer. Box terpilih memiliki outline cyan. Slot belum dikonfigurasi tidak dapat dinyalakan. Jumlah box terkonfigurasi berbeda dari kapasitas100 slot. API memberi status perintah firmware; LED fisik tetap harus diamati langsung.
+Kontrol manual operasional tetap dapat menyalakan beberapa box/rak bersamaan,
+durasi default60detik,1–3600detik, blink1detik, brightness dibatasi global.
+Simpan/apply/all-off/aktivasi OTA/reboot menghentikan seluruh program.
+Timer lokal tetap berjalan tanpa router.
 
-## Program otomatis dan idle
+## OTA dan jaringan
 
-Panel di atas peta menyediakan Running box, Kedip bergilir, Pelangi mengalir dan Napas warna. Running/kedip mengikuti urutan mapping tersimpan; semua LED dalam box menyala bersama memakai warna konfigurasi box. Pelangi/napas bekerja pada semua box yang terpetakan. LED yang belum bermapping tetap padam; gunakan tes hardware rak untuk LED tersebut.
-
-Brightness default32 dibatasi batas global. Waktu langkah100–5000 ms mengatur kecepatan running/kedip dan setengah siklus napas. Pelangi bergeser tiap30 ms. Tes default30 detik dapat diatur1–3600 detik. **Jalankan sebagai idle** berjalan terus sampai dihentikan; tidak otomatis hidup setelah reboot. Status menunjukkan TES/IDLE dan pola aktif; kartu yang diterangi program diberi label PROGRAM.
-
-Perintah manual/JARVIS yang masih aktif mendapat prioritas pada box yang sama, termasuk fase gelap blink; setelah timer habis, box mengikuti program lagi. Tes hardware rak menimpa animasi pada output itu. Hentikan program hanya mematikan animasi; perintah manual tetap berjalan. Padamkan semua, simpan konfigurasi, reboot dan aktivasi OTA menghentikan seluruh program/LED. Animasi berjalan lokal tanpa delay dan tidak menulis flash.
-
-## Menambah rak
-
-Isi jumlah rak, box per rak, dan LED per box pada generator. Contoh4 rak ×25 box ×3 LED menghasilkan100 box dan75 LED per output. Gunakan hanya sesuai jumlah LED yang benar-benar terpasang. Editor mendukung ID/nama/output/LED awal/jumlah; ID duplikat, overlap, dan rentang di luar output ditolak sebelum request, lalu divalidasi kembali oleh firmware.
-
-Perubahan draft tidak menyalakan LED atau menulis flash. Muat ulang membuang draft. Request nyala tidak menulis NVS. Timer tetap berjalan ketika Wi-Fi putus. Setelah reboot seluruh box padam.
-
-## OTA berikutnya
-
-Controller harus terhubung ke router yang sama dengan komputer. Di Konfigurasi → OTA, aktifkan jendela10 menit. Aktivasi memadamkan LED. Upload melalui port jaringan Arduino IDE atau espota bawaan core3.3.10 dengan password OTA perangkat, bukan password AP/router/API.
-
-Saat transfer berlangsung, web bisa sementara tidak merespons karena ArduinoOTA menangani upload secara sinkron. Setelah sukses, perangkat reboot, menyambung lagi ke router, mempertahankan mapping dan menutup OTA. Aktifkan lagi untuk upload berikutnya. Jika transfer gagal, periksa versi/status sebelum mengulang; jangan menganggap timeout berarti flash berhasil.
-
-Pada komputer dengan beberapa adapter satu subnet, uploader ESP32 menggunakan IP sumber undangan UDP untuk koneksi balik TCP. Listener host `0.0.0.0` menghindari pengikatan ke adapter yang berbeda. Tentukan port host dan izinkan koneksi balik hanya jika dibutuhkan oleh firewall jaringan; jangan mematikan firewall secara umum. Catat hasil transfer nyata, bukan hanya aktivasi OTA.
+OTA tetap manual10menit, STA, password OTA perangkat, berbeda dari AP/router.
+Transfer sinkron dapat membuat web sementara tidak merespons. Periksa versi/UTC setelah reboot.
+Build lab v0.7.0 menegakkan profil HuaweiJIN/AP12345678 pada boot; secret OTA dipertahankan.
+Source/build lokal tidak membuktikan perangkat sudah diperbarui.

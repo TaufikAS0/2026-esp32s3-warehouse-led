@@ -34,11 +34,22 @@ void WebService::state(JsonObject out, size_t i, uint32_t now) {
   const auto value = program.color(i, controller_.config(), now);
   auto automaticColor = out["program_color"].to<JsonArray>();
   automaticColor.add(value.r); automaticColor.add(value.g); automaticColor.add(value.b);
+  if (automatic && program.pattern() == Warehouse::Pattern::Rainbow) {
+    auto pixels = out["program_colors"].to<JsonArray>();
+    const auto& box = controller_.config().boxes[i];
+    for (size_t p = box.start; p < size_t(box.start) + box.count; ++p) {
+      const auto pixel = program.pixelColor(i, p, controller_.config(), now);
+      auto rgb = pixels.add<JsonArray>(); rgb.add(pixel.r); rgb.add(pixel.g); rgb.add(pixel.b);
+    }
+  }
 }
 void WebService::status() {
   const uint32_t now = millis(); controller_.update(now);
+  leds_.program().update(now); leds_.hardwareTests().update(now);
   JsonDocument doc;
   doc["version"] = Firmware::kVersion; doc["uptime_ms"] = now;
+  doc["build_utc"] = Firmware::kBuildUtc; doc["build_identity"] = Firmware::kBuildIdentity;
+  doc["config_revision"] = store_.revision();
   doc["sta_connected"] = wifi_.sta(); doc["ap_active"] = wifi_.ap(); doc["ip"] = wifi_.ip();
   doc["ap_ssid"] = wifi_.apName(); doc["led_driver_ready"] = leds_.ready();
   doc["storage_error"] = store_.loadError(); doc["ota_remaining_ms"] = ota_.remaining(now);
@@ -48,6 +59,17 @@ void WebService::status() {
   program["pattern"] = Warehouse::patternName(leds_.program().pattern());
   program["brightness"] = leds_.program().brightness(); program["step_ms"] = leds_.program().step();
   program["remaining_ms"] = leds_.program().remaining(now);
+  const auto cursor = leds_.program().cursor(now);
+  program["output"] = cursor.output < 0 ? 0 : cursor.output + 1;
+  program["position"] = cursor.position; program["total"] = cursor.total;
+  program["cycle_ms"] = leds_.program().cycleMs();
+  if (cursor.box >= 0) {
+    const auto& box = controller_.config().boxes[cursor.box];
+    program["box_id"] = box.id; program["start_led"] = box.start + 1; program["end_led"] = box.start + box.count;
+  } else {
+    program["start_led"] = cursor.output < 0 ? 0 : 1;
+    program["end_led"] = cursor.output < 0 ? 0 : controller_.config().ledCounts[cursor.output];
+  }
   auto outputs = doc["outputs"].to<JsonArray>();
   for (auto count : controller_.config().ledCounts) outputs.add(count);
   auto tests = doc["hardware_tests"].to<JsonArray>();
@@ -68,11 +90,13 @@ void WebService::boxes() {
 }
 void WebService::getConfig() {
   JsonDocument doc; Codec::encodeConfig(controller_.config(), doc.to<JsonObject>());
+  doc["revision"] = store_.revision();
   doc["wifi"]["ssid"] = store_.ssid(); doc["wifi"]["password_configured"] = !store_.pass().isEmpty();
   send(200, doc);
 }
 void WebService::putConfig() {
   JsonDocument doc; if (!body(doc)) return;
+  if (!checkRevision(doc.as<JsonVariantConst>())) return;
   auto candidate = std::unique_ptr<Warehouse::Config>(new(std::nothrow) Warehouse::Config);
   if (!candidate) { error(503, "configuration allocation failed"); return; }
   String e;
@@ -107,6 +131,9 @@ void WebService::putConfig() {
   getConfig();
 }
 void WebService::routeUnknown() {
+  if (server_.uri() == "/api/v1/profiles" || server_.uri().startsWith("/api/v1/profiles/")) {
+    profileRoute(); return;
+  }
   const String outputPrefix = "/api/v1/outputs/", testSuffix = "/test";
   const String path = server_.uri();
   if (path.startsWith(outputPrefix) && path.endsWith(testSuffix)) {
@@ -122,9 +149,9 @@ void WebService::routeUnknown() {
     if (command.durationMs > 30000) { error(400, "hardware test maximum 30000 ms"); return; }
     if (command.on && !controller_.config().ledCounts[o]) { error(400, "output has no installed LEDs"); return; }
     if (!leds_.ready()) { error(503, "LED driver unavailable"); return; }
-    const uint32_t now = millis(); Warehouse::Command off;
-    for (size_t i = 0; i < controller_.config().boxCount; ++i)
-      if (controller_.config().boxes[i].output == o) controller_.set(i, off, now);
+    const uint32_t now = millis();
+    if (command.on) controller_.allOff();
+    leds_.off();
     leds_.hardwareTests().set(o, command, controller_.config(), now);
     leds_.update(controller_, now);
     JsonDocument result; result["output"] = o + 1;
@@ -147,7 +174,7 @@ void WebService::routeUnknown() {
     const uint32_t now = millis();
     if (command.on && doc["color"].isUnbound())
       memcpy(command.color, controller_.config().boxes[i].color, sizeof(command.color));
-    leds_.hardwareTests().cancel(controller_.config().boxes[i].output);
+    leds_.off(); // Manual command exits all test modes before returning to normal operation.
     controller_.set(i, command, now); controller_.update(now); leds_.update(controller_, now);
     JsonDocument response; state(response.to<JsonObject>(), i, now); send(200, response);
     return;
@@ -187,7 +214,7 @@ void WebService::begin() {
     else if (name == "breathe") pattern = Warehouse::Pattern::Breathe;
     else { error(400, "unknown program pattern"); return; }
     if (!leds_.ready()) { error(503, "LED driver unavailable"); return; }
-    leds_.hardwareTests().clear();
+    controller_.allOff(); leds_.off();
     leds_.program().start(pattern, doc["idle"] | false, doc["brightness"] | 32u,
                           doc["step_ms"] | 500u, doc["duration_ms"] | 30000u, controller_.config(), millis());
     leds_.update(controller_, millis()); status();

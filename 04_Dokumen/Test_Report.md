@@ -1,3 +1,104 @@
+# Verifikasi v0.7.1 — 2026-10-20
+
+## Perbaikan503 konfigurasi100box — v0.7.0 -> v0.7.1
+
+- Akar masalah terkonfirmasi pada implementasi: SettingsStore memakai putString/nvs_set_str
+  dengan batas4000byte termasuk NUL; JSON100box default8671byte sebelum Wi-Fi.
+  Stub sebelumnya menerima string tanpa batas. Error NVS spesifik percobaan pengguna
+  tidak tersedia melalui API, sehingga tidak ada klaim membaca log flash kegagalan itu.
+- Config baru memakai blob config_blob, legacy string config tetap terbaca bila blob belum ada.
+  Legacy/credentials/profil tidak dihapus, blob corrupt tidak fallback ke mapping legacy usang.
+- Suite host15Python/7C++/DOM lulus. Storage memakai kode asli, stub dengan batas string
+  dan tipe NVS:100box default+field maksimum, save ulang, reload/reboot simulasi,
+  failure/OOM/revision dan corrupt isolation. API failure injection diperbarui ke key blob.
+- Build UTC2026-10-20T10:25:13Z, pinned core3.3.10/Json7.4.2/NeoPixel1.15.2,
+  UART/CH340 CDCOnBoot=default. Flash1089845/1310720, RAM61628/327680byte;
+  app binary1090000byte, SHA2568eaa5624d761b20d5f245636a63c1303b7f6711d26137c2625dc3cc535ce0d51.
+  Gate metadata/partisi dan manifest lulus.
+- OTA app-only berpassword sukses pada2026-10-20T10:27:29Z di192.168.1.28,
+  Warehouse-9FC114; identitas runtime cocok nonce59e2ae105ea3462a982b7306d68da0bc,
+  dashboard cocok source, jaringan/config sebelum upgrade terjaga, OTA tertutup/driver ready.
+- Uji API pada ESP nyata pada2026-10-20T10:27:41Z: PUT100box default, GET exact roundtrip,
+  PUT ulang100box, create/read/update profil100box, apply profil100box: seluruhnya sukses.
+  Konfigurasi awal1box/mapping/warna/output/brightness/Wi-Fi dikembalikan persis;
+  revision maju21->25. Profil tes dihapus dan daftar profil kembali sama seperti sebelum tes.
+  Tidak ada perintah LED on/program/hardware test. Semua state padam.
+- Bukti lokal ignored _sandbox/ota-v071/{verification.json,storage-test.json,snapshot API}.
+  manifest uploaded=false adalah snapshot waktu build; kejadian OTA tercatat terpisah.
+- Batas:100box reboot fisik sesudah save belum diuji; hanya reload host dan GET langsung
+  perangkat. Tidak ada uji optik, listrik, power-loss/endurance/fragmentasi NVS.
+  Tidak ada commit/push/merge; branch feature/warehouse-led-controller, base347751a.
+
+## Riwayat implementasi v0.7.0
+
+Previous v0.6.1 -> source v0.7.0. Branch feature/warehouse-led-controller,
+base347751a. Perubahan lokal belum commit/push/merge. OTA dilakukan kemudian atas instruksi pengguna.
+
+## Verifikasi OTA nyata — 2026-10-20T10:07:55Z
+
+- Controller Warehouse-9FC114 di192.168.1.28: v0.6.1 -> v0.7.0 melalui OTA app-only berpassword; uploader return0.
+- Identitas setelah reboot cocok dengan manifest: build UTC2026-10-20T09:17:45Z,
+  nonce05dc08cedb4d4bf38032b0b9b3629dda. SHA256 binary cocok sebelum transfer.
+- Mapping/warna35box, outputs75/75/75/75 dan config Wi-Fi sama persis sebelum/sesudah.
+- STA kembali, driver ready, storage_error kosong, OTA tertutup; seluruh box/program/tes berstatus padam.
+- Dashboard yang disajikan cocok byte-per-byte dengan source setelah ekspansi macro versi/UTC.
+  GET profiles merespons capacity5 dan daftar kosong; tidak membuat profil atau mengubah mapping perangkat.
+- Bukti lokal ignored: _sandbox/ota-v070/verification.json dan snapshot API sebelum/sesudah.
+  Manifest build uploaded=false adalah snapshot saat build; kejadian upload dicatat terpisah di verification.json.
+- Tidak menyalakan tes LED. Status API padam bukan pengamatan optik. Belum ada bukti optik v0.7.0,
+  tes75LED, heap stress, NVS power-loss, endurance atau validasi seluruh pola pada perangkat nyata.
+
+## Build final
+
+- Build UTC aktual: **2026-10-20T09:17:45Z**, bukan waktu upload/uptime.
+- FQBN: esp32:esp32:esp32s3:FlashSize=4M,PartitionScheme=default,PSRAM=disabled,USBMode=hwcdc,CDCOnBoot=default.
+- Core3.3.10 / ArduinoJson7.4.2 / NeoPixel1.15.2, flash4MB/noPSRAM/UART-CH340.
+- Flash menurut compiler: 1087373/1310720 byte; static RAM 61628/327680 byte.
+- Binary aplikasi: 1087520 byte; SHA-256: 4c791ec842c5314547240fa0e57f6b3d0e386fc4cecb04d72f41f9d9b4ad8463.
+- Header generated bersama dan gate versi/UTC/nonce binary lulus. Partisi dua slot1280KiB
+  serta NVS128KiB@0x290000 lulus. Manifest lokal pada _sandbox/build/manifest.json.
+- Build awal menampilkan warning missing-field-initializers dari dependency core/TinyUSB;
+  tidak ditemukan error source proyek. Build final berhasil.
+- Profile lab privat disiapkan lokal; header/binary ignored, nilai tidak dicatat di dokumen.
+
+## Pengujian yang dilakukan sendiri
+
+| Pengujian | Hasil / batas |
+|---|---|
+| Python | 15 tes:11 client HTTP loopback +4 metadata, termasuk stale identity/size/partition rejection |
+| Domain | Kapasitas100box/300posisi, overlap/ID/range, manual timer/clamp, transaksi gagal |
+| AnimationProgram | Config sengaja diacak, output/start_led ordering, skip rak kosong, satu rak/<=75LED, rainbow per pixel, breathe RGB, expiry/long uptime |
+| Profil | 5x100box, maksimum field, roundtrip8065-byte limit, format/length/CRC/UTF-8, duplicate/full/revision, simulasi COW128KiB, gagal write/reboot/corrupt isolation |
+| NeoPixel asli | Constructor berparameter, GRB bytes hijau/merah/cyan, frame dedup; setiap show diverifikasi satu rak;4->1 clear-before-light |
+| Codec | ArduinoJson asli, schema1/warna legacy, tipe/range/100box |
+| SettingsStore asli | Preferences/RNG/serial stub: legacy config, targeted HuaweiJIN/AP migration, no-op tanpa write, revision, gagal write dan String OOM tidak menulis JSON terpotong, secret/mapping/warna terjaga |
+| Handler API asli | WebServer/WiFi/OTA/strip boundary stub: CRUD5profil/apply,428/409/400/404/405/422/503, credential exclusion, failed writes mempertahankan config/manual, tes eksklusif dan manual membatalkan tes, OTA STA guard |
+| DOM web | Embedded JS di jsdom:100box A–D/cyan/label-, profil preview/save/draft/apply/update/delete/export/import, legacy/custom ID, dirty draft/popup conflict preservation, status recovery |
+| Browser nyata ke fixture lokal | SIMULASI loopback: generator100box dan simpan profil sambil config aktif tetap1box; preview75LED/rak; screenshot _sandbox/v070-profiles-simulation.png |
+
+Suite scripts/test.ps1 dan scripts/build.ps1 lulus. Tes host handler tidak memakai
+socket WebServer ESP32; Preferences/strip stub bukan flash/RMT/LED fisik.
+Fixture browser berlabel SIMULASI, hanya loopback; server/tab pengujian sudah ditutup.
+
+## Batas dan penerimaan berikutnya
+
+- OTA/IP dan identitas runtime telah diverifikasi pada bagian OTA di atas; COM tidak diakses.
+- Belum membuktikan LED optik, sinyal/timing,75LED, listrik/suhu, recovery router/interupsi OTA,
+  heap stress dan ketahanan NVS terhadap putus daya/fragmentasi.
+- Rencana fisik setelah instruksi terpisah:3LED, lalu satu rak <=75LED secara bergantian.
+  Tidak menguji beberapa rak bersamaan dalam mode tes.
+- HTTP API LAN tetap terbuka; OTA tetap password perangkat/manual10menit. Boot padam.
+- Migrasi jaringan pada perangkat belum dijalankan. Build menargetkan HuaweiJIN/AP12345678
+  dari sumber privat, hanya nilai berbeda yang ditulis; mapping/warna/OTA dipertahankan.
+- File source/doc repository diperiksa terhadap credential lab privat; tidak ada kecocokan
+  di luar header/artefak ignored. Ini bukan audit seluruh secret dalam riwayat Git.
+
+---
+
+# Laporan historis v0.6.1 dan sebelumnya
+
+Bagian berikut adalah bukti dari sesi asal, bukan pengujian ulang perangkat pada tugas v0.7.0.
+
 # Laporan verifikasi
 
 ## v0.6.1 — pemulihan status web, 2026-10-07

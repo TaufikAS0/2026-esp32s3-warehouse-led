@@ -1,14 +1,28 @@
 # ESP32-S3 Warehouse LED Controller
 
-Firmware **v0.6.1** untuk satu ESP32-S3, empat output WS2812B, maksimum 100 box / 300 LED. JARVIS mengirim ID box melalui HTTP; controller menyimpan mapping dan menjalankan timer secara lokal.
+Firmware **v0.7.1** untuk satu ESP32-S3, empat output WS2812B, maksimum 100 box / 300 LED. JARVIS mengirim ID box melalui HTTP; controller menyimpan mapping dan menjalankan timer secara lokal.
 
 Default aman: satu box `R01-B01`, tiga LED, brightness maksimum 128, seluruh LED padam setelah reboot. Tambahkan box melalui generator/editor web sampai empat rak × 25 box. Jumlah LED diisi manual, tidak dideteksi otomatis.
+
+## Baru pada v0.7.0
+
+Generator membuat A-01–A-25, B-01–B-25, C dan D, label "-", warna #4cd7f6.
+Simpan hingga lima profil pada ESP; preview, muat draft, terapkan, ekspor/impor JSON.
+Profil tidak membawa Wi-Fi atau secret. Running/kedip mengikuti urutan LED fisik,
+pelangi mengikuti posisi pixel, napas mempertahankan warna config. Rak dites bergantian.
+Config memakai revision untuk mencegah penyimpanan dari data klien yang usang.
+
+Build wajib memakai scripts/build.ps1, sumber lab privat dan metadata UTC generated.
+Lihat [release notes v0.7.0](04_Dokumen/Release_v0.7.0.md) dan [test report](04_Dokumen/Test_Report.md).
+v0.7.1 memperbaiki batas string NVS saat menyimpan100box melalui blob dengan pembacaan
+config lama tetap didukung. Lihat [release notes v0.7.1](04_Dokumen/Release_v0.7.1.md)
+dan Test_Report untuk status upload/bukti perangkat aktual; tes optik tetap terpisah.
 
 ## Mulai
 
 1. Cocokkan board dan wiring dengan [pin map](01_Desain/Pin_Map.md). Jangan memasok LED dari regulator 3.3 V ESP32.
 2. Install core `esp32:esp32@3.3.10`, lalu jalankan `./scripts/build.ps1 -InstallDependencies`.
-3. Upload via USB setelah port, board, ukuran flash, dan pin dikonfirmasi. Target build generic ESP32-S3, flash 4 MB, dua slot OTA, tanpa PSRAM, USB CDC aktif. Panduan lengkap: [Build dan setup](04_Dokumen/Build_Setup.md).
+3. Upload via USB setelah port, board, ukuran flash, dan pin dikonfirmasi. Target build generic ESP32-S3, flash 4 MB, dua slot OTA, tanpa PSRAM, UART/CH340 (CDCOnBoot disabled). Panduan lengkap: [Build dan setup](04_Dokumen/Build_Setup.md).
 4. Buka serial 115200, kirim `provision` dengan newline. Simpan password AP dan password OTA di penyimpanan pribadi. Default password AP: 12345678; password OTA tetap unik dan privat.
 5. Hubungkan ke AP `Warehouse-<suffix>`, buka `http://192.168.4.1/`, langsung simpan Wi-Fi gudang serta mapping.
 6. Untuk JARVIS, gunakan [API](04_Dokumen/API.md) dan [client Python](scripts/warehouse_client.py). Database barang tidak berada di controller ini.
@@ -17,7 +31,7 @@ Dashboard mengikuti referensi visual LumenGrid: empat panel rak,25 posisi per ra
 
 ## Struktur dan Git
 
-Klik box membuka popup mapping, warna konfigurasi tersimpan dan kontrol manual. Jumlah LED rak diatur terpisah melalui Simpan setting rak. Panel program otomatis menyediakan running antar-box, kedip bergilir, pelangi dan napas warna; dapat dites dengan timer atau dijalankan sebagai idle. Perintah box aktif mendapat prioritas. Reboot tetap padam; animasi tidak menulis flash.
+Klik box membuka popup mapping, warna konfigurasi tersimpan dan kontrol manual. Jumlah LED rak diatur terpisah melalui Simpan setting rak. Panel program otomatis menyediakan running antar-box, kedip bergilir, pelangi dan napas warna; dapat dites dengan timer atau dijalankan sebagai idle. Tes/idle eksklusif satu rak bergantian, maksimum 75 LED. Perintah manual menghentikan tes sebelum diterapkan. Reboot tetap padam; animasi tidak menulis flash.
 
 - `01_Desain`: wiring dan batas elektrik.
 - `02_Firmware/WarehouseLed`: source aktif, sketch tipis, driver LED, domain box, codec, NVS, Wi-Fi, web, OTA.

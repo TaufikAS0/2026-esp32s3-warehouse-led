@@ -26,4 +26,7 @@ class WebService {
   void putConfig();
   void state(JsonObject out, size_t i, uint32_t now);
   void routeUnknown();
+  bool checkRevision(JsonVariantConst doc);
+  void profileRoute();
+  void profileError(Profiles::Result result);
 };

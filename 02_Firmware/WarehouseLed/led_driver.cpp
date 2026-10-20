@@ -17,14 +17,26 @@ void LedDriver::off() {
 }
 void LedDriver::update(const Warehouse::Controller& controller, uint32_t now) {
   if (!ready_) return;
-  Warehouse::Pixel frame[75];
+  program_.update(now); hardwareTests_.update(now);
+  Warehouse::Pixel frames[4][75]{};
+  const bool hardware = hardwareTests_.active(now);
+  const bool automatic = program_.active(now) || hardware;
   for (size_t o = 0; o < 4; ++o) {
-    controller.render(o, now, frame);
-    program_.render(o, controller, now, frame);
-    hardwareTests_.render(o, controller.config(), now, frame);
-    if (!memcmp(last_[o], frame, sizeof(frame))) continue;
-    for (size_t p = 0; p < 75; ++p) strips_[o].setPixelColor(p, frame[p].r, frame[p].g, frame[p].b);
+    if (!automatic) controller.render(o, now, frames[o]);
+    if (!hardware && program_.active(now)) program_.render(o, controller, now, frames[o]);
+    if (hardware) hardwareTests_.render(o, controller.config(), now, frames[o]);
+  }
+  // Clear all retiring outputs before lighting any new output (including 4 -> 1).
+  const Warehouse::Pixel black[75]{};
+  for (size_t o = 0; o < 4; ++o) {
+    if (!memcmp(frames[o], black, sizeof(black)) && memcmp(last_[o], black, sizeof(black))) {
+      strips_[o].clear(); strips_[o].show(); memcpy(last_[o], black, sizeof(black));
+    }
+  }
+  for (size_t o = 0; o < 4; ++o) {
+    if (!memcmp(last_[o], frames[o], sizeof(frames[o]))) continue;
+    for (size_t p = 0; p < 75; ++p) strips_[o].setPixelColor(p, frames[o][p].r, frames[o][p].g, frames[o][p].b);
     strips_[o].show();
-    memcpy(last_[o], frame, sizeof(frame));
+    memcpy(last_[o], frames[o], sizeof(frames[o]));
   }
 }

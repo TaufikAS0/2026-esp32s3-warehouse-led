@@ -5,6 +5,7 @@ class HardwareTests {
  public:
   void set(size_t output, const Command& command, const Config& config, uint32_t now) {
     if (output >= kOutputs) return;
+    clear(); // A hardware test owns exactly one rack.
     states_[output] = State{};
     static_cast<Command&>(states_[output]) = command;
     if (states_[output].brightness > config.brightnessLimit) states_[output].brightness = config.brightnessLimit;
@@ -16,6 +17,14 @@ class HardwareTests {
     return elapsed < states_[output].durationMs ? states_[output].durationMs - elapsed : 0;
   }
   const State& state(size_t output) const { return states_[output]; }
+  void update(uint32_t now) {
+    for (size_t o = 0; o < kOutputs; ++o)
+      if (states_[o].on && !remaining(o, now)) states_[o].on = false;
+  }
+  bool active(uint32_t now) const {
+    for (size_t o = 0; o < kOutputs; ++o) if (remaining(o, now)) return true;
+    return false;
+  }
   void cancel(size_t output) { if (output < kOutputs) states_[output].on = false; }
   void clear() { for (auto& state : states_) state.on = false; }
   bool render(size_t output, const Config& config, uint32_t now, Pixel* frame) const {

@@ -8,3 +8,5 @@ secrets*
 *.elf
 *.map
 .vscode/
+02_Firmware/WarehouseLed/generated_build.h
+02_Firmware/WarehouseLed/generated_lab.h

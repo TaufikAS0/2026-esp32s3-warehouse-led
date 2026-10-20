@@ -1,82 +1,122 @@
-# HTTP API v1
+# HTTP API v1 — firmware v0.7.0
 
-Base URL: `http://<IP-controller>/api/v1`. Mulai v0.5.0, web dan HTTP API terbuka tanpa token sesuai instruksi pengguna. Header Authorization tidak diperlukan. JSON mutation memakai `Content-Type: application/json`. Body maksimal 32768 byte. Password OTA/router tidak berada di URL. Tidak ada endpoint untuk membaca token/password.
+Base URL http://<IP-controller>/api/v1. HTTP LAN terbuka tanpa login/token.
+Mutation JSON memakai Content-Type: application/json; body maksimal 32768 byte.
+Tidak ada retry write otomatis. Timeout write berarti hasil belum diketahui: baca status.
 
-| Method | Path | Perilaku |
+| Method | Path | Fungsi |
 |---|---|---|
-| GET | `/status` | Versi, koneksi, IP, jumlah LED/output, kondisi driver/storage, timer OTA, state tiap box |
-| GET | `/boxes` | Schema, batas brightness, outputs, daftar ID/nama/mapping |
-| PUT | `/outputs/{1..4}/test` | Tes seluruh LED terpasang pada rak; payload state, default3 detik, maksimal30 detik; menghentikan box aktif pada rak itu |
-| PUT | `/boxes/{id}/state` | Perintah satu box, respons state efektif |
-| POST | `/all-off` | Padamkan semua, respons `{"ok":true}` |
-| GET | `/config` | Mapping + SSID dan password_configured, tanpa password |
-| PUT | `/config` | Ganti penuh mapping/batas; opsi Wi-Fi; padamkan output hanya setelah write berhasil |
-| POST | `/ota` | `{"enabled":true}` membuka 10 menit ketika STA, false menutup |
+| GET | /status | Version/build_utc/build_identity, config_revision, jaringan, driver/storage, manual/program/tes |
+| GET | /boxes | Mapping, warna tersimpan, output, brightness |
+| GET / PUT | /config | Config aktif termasuk revision; PUT mengganti penuh mapping, Wi-Fi opsional |
+| PUT | /boxes/{id}/state | Manual steady/blink; menghentikan seluruh tes terlebih dahulu |
+| PUT | /outputs/{1..4}/test | Tes eksklusif satu output, default 3 detik, maksimal 30 detik |
+| PUT | /program | Running/blink/rainbow/breathe satu rak bergantian |
+| POST | /all-off | Hentikan seluruh state/program/tes |
+| POST | /ota | enabled boolean; jendela manual 10 menit, STA, upload tetap berpassword |
+| GET / POST | /profiles | Daftar/create, kapasitas 5 slot |
+| GET / PUT / DELETE | /profiles/{1..5} | Detail/update/delete |
+| POST | /profiles/{1..5}/apply | Terapkan profil ke config aktif |
 
-## State box
+## Config dan revision
 
-```json
-{"on":true,"color":[0,255,0],"brightness":128,"mode":"steady","duration_ms":60000}
-```
+GET /config menambahkan revision integer uint32, awal 0 untuk record legacy.
+PUT wajib mengirim revision yang sama dengan GET terakhir: hilang/salah tipe 428,
+usang 409. Pemeriksaan dilakukan sebelum write; gagal tidak mengubah output/config.
+Sukses menaikkan revision, menyimpan record, memadamkan semua output/program.
+Revision disimpan bersama mapping dalam key config_blob (v0.7.1); schema mapping tetap1.
+Legacy string config tetap dibaca bila blob belum ada; HTTP JSON tidak berubah.
 
-`on` wajib boolean. Default field lain: hijau, brightness128, steady, 60000 ms. Channel/brightness integer0..255, mode steady/blink, durasi1000..3600000 ms. Batas brightness global diterapkan; respons mengembalikan brightness efektif. Blink 500 ms nyala / 500 ms padam. Perintah baru mengganti seluruh state box dan memulai ulang timer. `{"on":false}` cukup untuk memadamkan. Field opsional yang dikirim tetap divalidasi walaupun on=false.
-
-Respons:
-
-```json
-{"id":"R01-B01","on":true,"remaining_ms":60000,"brightness":128,"mode":"steady","color":[0,255,0]}
-```
-
-State `on` berarti timer aktif, termasuk fase blink padam. Tidak membuktikan LED fisik menyala. ID case-sensitive; JARVIS harus memilih ID dari `/boxes`, bukan membangun indeks pixel sendiri.
-
-## Konfigurasi
+Contoh (ambil revision aktual dahulu):
 
 ```json
-{
-  "schema":1,
-  "brightness_limit":128,
-  "outputs":[3,0,0,0],
-  "boxes":[{"id":"R01-B01","name":"Rak 1 Box 1","output":1,"start_led":1,"led_count":3}],
-  "wifi":{"ssid":"NamaRouter","password":"<diisi-lokal>"}
-}
+{"schema":1,"revision":0,"brightness_limit":128,"outputs":[3,0,0,0],
+ "boxes":[{"id":"A-01","name":"-","output":1,"start_led":1,"led_count":3,"color":[76,215,246]}]}
 ```
 
-`outputs` tepat empat integer0..75; 0 menonaktifkan mapping rak. boxes1..100; ID unik ASCII1..24 byte, name string<=48 byte, output1..4, start_led1..75, led_count1..75. Rentang harus terpasang dan tidak overlap. ID tidak wajib mengikuti Rxx-Bxx, tetapi generator memakai pola itu. Jumlah default tiga LED dapat diedit per box.
+outputs tepat 4 integer 0..75; boxes 1..100; ID unik ASCII [A-Za-z0-9_-] 1..24 byte,
+name maksimal 48 byte, output 1..4, start_led/led_count 1..75. Mapping tidak overlap
+dan harus berada dalam jumlah terpasang. ID lama dan custom tetap diterima.
+Warna opsional untuk schema lama, default hijau bila tidak ada.
+Generator UI membatasi 25 box/rak; API mempertahankan validasi mapping legacy.
 
-Wi-Fi opsional: jika tidak dikirim, simpan jaringan lama. Jika dikirim, ssid wajib string<=32 byte; password opsional hanya ketika SSID tetap sama. SSID baru membutuhkan password eksplisit, kosong untuk jaringan terbuka. SSID kosong memaksa AP-only dan menghapus password. Password non-kosong8..63 byte. GET mengembalikan password_configured, tidak mengembalikan password.
+wifi opsional; bila dihilangkan jaringan dipertahankan. ssid string maksimal 32 byte.
+Password baru wajib eksplisit saat mengganti SSID, kosong untuk router terbuka;
+password nonkosong 8..63 byte. SSID kosong menghapus password dan memakai AP-only.
+GET hanya memberikan ssid/password_configured. Build lab v0.7.0 menegakkan kembali
+profil HuaweiJIN pada boot berikutnya; deployment lain memerlukan keputusan/build lain.
 
-Satu operasi Simpan menulis keseluruhan mapping/jaringan. Gagal validasi/tulis tidak mengubah mapping aktif. Sukses memadamkan seluruh output. Mengubah Wi-Fi dapat memutus browser satu detik setelah respons.
+## Manual dan hardware test
 
-## Error dan JARVIS
-
-Error JSON `{"error":"pesan"}`: 400 input salah, 404 ID/path tidak ditemukan, 405 method salah, 409 OTA tanpa STA, 413 body terlalu besar, 415 content type salah, 503 alokasi/driver/storage gagal.
-
-Client Python stdlib, tidak membutuhkan pip. Isi `WAREHOUSE_LED_URL` secara lokal, lalu:
-
-```powershell
-python scripts/warehouse_client.py boxes
-python scripts/warehouse_client.py on R01-B01 --seconds 60 --color 0 255 0 --blink
-python scripts/warehouse_client.py off R01-B01
-python scripts/warehouse_client.py all-off
-python scripts/warehouse_client.py status
+```json
+{"on":true,"color":[76,215,246],"brightness":128,"mode":"steady","duration_ms":60000}
 ```
 
-Di kode JARVIS, import WarehouseClient dan panggil set_box. Tidak ada token API. Password OTA tetap disimpan privat. JARVIS mengelola relasi barang→ID box; jika barang ambigu, minta lokasi yang benar, jangan menyalakan tebakan.
+on wajib boolean. Brightness/channel integer 0..255, mode steady/blink,
+durasi 1000..3600000 ms. Default brightness128, steady, 60000 ms;
+warna yang tidak dikirim memakai warna config box. Blink 500 ms on/500 ms off.
+Brightness dibatasi global. off cukup {"on":false}; field tambahan tetap divalidasi.
+Beberapa box manual boleh menyala bersamaan dalam operasi normal.
 
-Client memiliki timeout5 detik dan tidak mengikuti redirect. Kegagalan transport setelah write menghasilkan AmbiguousResult: hasil belum diketahui. Jangan retry otomatis; panggil status dan periksa box. Ini tidak memberikan exactly-once delivery.
+Hardware test memakai payload yang sama; default durasi3000, maksimal30000.
+Mulai tes memadamkan semua manual/program/tes sebelumnya, hanya satu rak dites.
+Perintah manual berikutnya menghentikan tes/program sebelum diterapkan.
+Tes off menghentikan tes tanpa menghapus state manual operasional yang ada.
 
-Status mencakup `hardware_tests` untuk empat output: output, on, remaining_ms, brightness, mode, color. Tes hardware tidak menulis flash. Perintah box baru membatalkan tes pada output box tersebut. All-off, simpan konfigurasi, reboot dan aktivasi OTA menghentikan tes.
-
-## Program otomatis (v0.6.0)
-
-`PUT /api/v1/program` menerima contoh:
+## Program otomatis eksklusif
 
 ```json
 {"on":true,"pattern":"running","idle":false,"brightness":32,"step_ms":500,"duration_ms":30000}
 ```
 
-Pola wajib salah satu `running`, `blink`, `rainbow`, `breathe`. Field opsional: idle boolean defaultfalse, brightness integer0..255 default32, step_ms integer100..5000 default500, duration_ms integer1000..3600000 default30000. Mode idle mengabaikan timer tetapi nilai duration_ms tetap divalidasi jika dikirim. `{"on":false}` menghentikan program, tanpa menghapus perintah box manual. Respons berupa status controller. Method lain405; input invalid400, driver unavailable503.
+Pola running/blink/rainbow/breathe. idle defaultfalse, brightness default32,
+step_ms 100..5000 default500, duration_ms 1000..3600000 default30000.
+Idle mengulang terus; duration_ms tetap divalidasi bila dikirim.
+{"on":false} menghentikan animasi. Durasi tes membatasi total program,
+bukan waktu per rak; tes dapat berakhir sebelum seluruh rak selesai.
 
-Status memiliki `program`: on, idle, pattern, brightness efektif, step_ms, remaining_ms. Remaining0 berarti berkelanjutan hanya bila on=true dan idle=true. Box state menambah program_on serta program_color RGB yang sudah diskalakan brightness; field on/color/remaining_ms lama tetap menunjukkan perintah manual. Program berjalan pada mapping tersimpan, perintah manual aktif mendapat prioritas, hardware test menimpa output. All-off/config/OTA/reboot menghentikan program.
+Mulai program memadamkan manual/tes. Urutan output1..4 lalu start_led meningkat,
+tanpa mengubah urutan record config. Rak tanpa mapping dilewati.
+Running: satu box per langkah. Blink: setengah langkah on, setengah off.
+Rainbow: spektrum per posisi LED fisik; satu rak selama 6*step_ms.
+Breathe: warna config box, naik/turun intensitas selama 2*step_ms per rak.
+Semua pola maksimum satu rak/75 LED; LED tak terpetakan hitam.
+Manual berikutnya membatalkan program. Simpan/apply/all-off/OTA/reboot juga menghentikannya.
 
-Mapping box menambah `color:[r,g,b]` integer0..255, tersimpan di NVS sebagai warna konfigurasi. Field opsional untuk kompatibilitas schema1 lama; jika tidak ada, default hijau. API GET mengembalikan warna setiap box. Perintah nyala box tanpa color memakai warna konfigurasi box. Warna perintah eksplisit tidak menulis NVS.
+Status program: on,idle,pattern,brightness,step_ms,remaining_ms,
+output (1..4; 0 bila padam), position (1-based, 0 untuk pola seluruh rak),
+total (box pada rak), box_id saat running/blink, start_led,end_led,cycle_ms.
+Status box mempertahankan state manual on/color/remaining_ms dan menambah
+program_on/program_color (warna pixel pertama, sudah diskalakan).
+Saat rainbow aktif, program_colors berisi RGB setiap LED box untuk preview per pixel.
+Status bukan konfirmasi optik dan tidak mendeteksi strip putus.
+
+## Profil
+
+Envelope JSON portabel:
+
+```json
+{"format":1,"name":"Gudang utama","config":{"schema":1,"brightness_limit":128,
+ "outputs":[3,0,0,0],"boxes":[{"id":"A-01","name":"-","output":1,"start_led":1,"led_count":3,"color":[76,215,246]}]}}
+```
+
+Nama 1..48 byte UTF-8 valid, tanpa kontrol/spasi tepi; nama unik case-sensitive.
+config hanya menerima schema/brightness_limit/outputs/boxes, tanpa Wi-Fi/credential/runtime.
+POST create memilih slot kosong terkecil, respons201. Penuh/nama duplikat409.
+GET list: capacity dan profiles berisi id/name/box_count/valid/profile_revision.
+Record rusak tetap muncul valid=false,error dan revision untuk recovery/delete.
+GET detail menambah id/profile_revision pada envelope. GET detail rusak422.
+PUT update memakai envelope + profile_revision dari GET, tanpa menerapkan profil.
+DELETE memakai {"profile_revision":<aktual>}; key lain dan config aktif tetap.
+Apply memakai {"revision":<config aktual>,"profile_revision":<profil aktual>}.
+Revision tidak ada428; berubah409. Sukses apply mengembalikan GET config terbaru,
+memadamkan output, mempertahankan jaringan/credential dan tidak mengubah isi profil.
+Tulis gagal503; record lama dipertahankan. Penyimpanan hanya saat aksi eksplisit.
+
+## Error dan client
+
+400 input invalid; 404 ID/path; 405 method; 409 konflik/penuh/OTA tanpa STA;
+413 body; 415 content-type; 422 profil rusak; 428 revision wajib; 503 alokasi/driver/storage.
+Client Python stdlib tetap kompatibel untuk status/boxes/manual/all-off, timeout5 detik,
+tanpa Authorization, proxy mesin atau redirect, tanpa retry write.
+JARVIS memetakan barang ke ID box; menerapkan profil dengan ID baru perlu menyamakan ID pemanggil.

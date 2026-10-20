@@ -4,11 +4,11 @@
 #include <memory>
 void App::begin() {
   Serial.begin(Hardware::kSerialBaud);
-  Serial.printf("\nWarehouse LED %s\n", Firmware::kVersion);
+  Serial.printf("\nWarehouse LED %s | Build UTC %s\n%s\n", Firmware::kVersion, Firmware::kBuildUtc, Firmware::kBuildIdentity);
   auto config = std::unique_ptr<Warehouse::Config>(new(std::nothrow) Warehouse::Config);
   if (config) {
     Warehouse::setDefaults(*config);
-    store_.begin(*config); controller_.configure(*config);
+    store_.begin(*config); store_.migrateLab(*config); controller_.configure(*config);
   } else Serial.println("Configuration allocation failed; USB provisioning unavailable");
   if (!leds_.begin()) Serial.println("LED buffer allocation failed");
   if (!store_.loadError().isEmpty()) Serial.println(store_.loadError());

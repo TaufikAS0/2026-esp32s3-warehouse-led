@@ -20,10 +20,13 @@ int main() {
   assert(testFrame[0].r == 128 && testFrame[2].r == 128 && testFrame[3].r == 0);
   assert(tests.remaining(0, 999) == 1000); // rollover elapsed = 2000 ms
   assert(!tests.render(0, config, 1999, testFrame));
+  tests.update(1999); assert(!tests.state(0).on);
+  assert(!tests.remaining(0, UINT32_MAX - 1000)); // expired state cannot revive
   test.blink = true; tests.set(0, test, config, 10);
   assert(tests.render(0, config, 510, testFrame) && testFrame[0].r == 0);
   assert(tests.render(0, config, 1010, testFrame) && testFrame[0].r == 128);
   config.ledCounts[1] = 75; tests.set(1, test, config, 10);
+  assert(!tests.remaining(0, 10)); // replacement is exclusive
   tests.cancel(0); assert(!tests.remaining(0, 10) && tests.remaining(1, 10));
   assert(tests.render(1, config, 10, testFrame) && testFrame[74].r == 128);
   tests.clear(); assert(!tests.remaining(1, 10));

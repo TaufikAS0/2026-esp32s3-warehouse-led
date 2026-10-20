@@ -1,4 +1,5 @@
-param([string]$ArduinoCli = $env:ARDUINO_CLI, [switch]$InstallDependencies)
+param([string]$ArduinoCli = $env:ARDUINO_CLI, [switch]$InstallDependencies,
+      [switch]$NativeUsbCdc, [string]$LabSecretsFile = $env:WAREHOUSE_LAB_SECRETS_FILE)
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path $PSScriptRoot -Parent
 if (!$ArduinoCli) {
@@ -32,5 +33,15 @@ $taskCore = & $ArduinoCli --config-file $taskConfig core list --json | ConvertFr
 if (!($taskCore.platforms | Where-Object { $_.id -eq 'esp32:esp32' -and $_.installed_version -eq '3.3.10' })) {
     throw 'Required core esp32:esp32@3.3.10 missing. Install explicitly with arduino-cli core install esp32:esp32@3.3.10.'
 }
-& $ArduinoCli --config-file $taskConfig compile --fqbn 'esp32:esp32:esp32s3:FlashSize=4M,PartitionScheme=default,PSRAM=disabled,USBMode=hwcdc,CDCOnBoot=cdc' --warnings all --build-path (Join-Path $taskSandbox 'build') (Join-Path $taskRoot '02_Firmware\WarehouseLed')
+if (!$LabSecretsFile) { $LabSecretsFile = Join-Path $taskSandbox 'lab-secrets.json' }
+$taskBuild = Join-Path $taskSandbox 'build'
+$taskManifest = Join-Path $taskBuild 'manifest.json'
+if (Test-Path -LiteralPath $taskManifest) { Remove-Item -LiteralPath $taskManifest }
+python (Join-Path $PSScriptRoot 'build_metadata.py') generate --root $taskRoot --secrets $LabSecretsFile
+if ($LASTEXITCODE) { throw 'Build metadata/private lab generation failed.' }
+$taskCdc = if ($NativeUsbCdc) { 'cdc' } else { 'default' }
+$taskFqbn = 'esp32:esp32:esp32s3:FlashSize=4M,PartitionScheme=default,PSRAM=disabled,USBMode=hwcdc,CDCOnBoot=' + $taskCdc
+& $ArduinoCli --config-file $taskConfig compile --jobs 2 --fqbn $taskFqbn --warnings all --build-path $taskBuild (Join-Path $taskRoot '02_Firmware\WarehouseLed')
 if ($LASTEXITCODE) { throw 'ESP32-S3 build failed.' }
+python (Join-Path $PSScriptRoot 'build_metadata.py') verify --root $taskRoot --binary (Join-Path $taskBuild 'WarehouseLed.ino.bin') --partitions (Join-Path $taskBuild 'WarehouseLed.ino.partitions.bin') --fqbn $taskFqbn
+if ($LASTEXITCODE) { throw 'Application/metadata/partition gate failed.' }

@@ -1,84 +1,81 @@
-# Handoff lintas laptop / AI — 2026-10-20
+# Handoff v0.7.1 — perbaikan penyimpanan NVS
 
-## Mulai dari sini
+Source terbaru v0.7.1 memperbaiki save100box yang melampaui batas string NVS4000byte.
+Konfigurasi aktif disimpan JSON/schema1 sebagai config_blob; string config lama tetap
+dibaca bila blob belum ada. Blob rusak tidak fallback ke mapping legacy usang.
+Jangan downgrade tanpa backup/restore eksplisit. Baca Release_v0.7.1.md dan bagian
+terbaru Test_Report.md untuk hasil build/upload/uji nyata. OTA v0.7.1 di192.168.1.28
+terverifikasi2026-10-20T10:27:29Z, build UTC2026-10-20T10:25:13Z.
+Simpan ulang/apply profil100box pada ESP berhasil, lalu konfigurasi awal1box dipulihkan,
+revision25, profil sementara dihapus, seluruh state padam. Reboot fisik setelah100box
+save belum diuji. Checkpoint ini dipublikasikan atas instruksi pengguna pada branch
+feature/warehouse-led-controller; identitas commit aktual dilihat melalui Git.
+Tidak ada merge ke develop/main. Riwayat v0.7.0 berikut tetap historis.
 
-Repository: https://github.com/TaufikAS0/2026-esp32s3-warehouse-led
+## Baseline dan batas tugas
 
-**Jangan memakai checkout default develop sebagai source fitur terbaru.**
+Repository TaufikAS0/2026-esp32s3-warehouse-led, branch feature/warehouse-led-controller.
+Base Git347751a, firmware sebelumnya v0.6.1/source3eccf67. Source lokal kini v0.7.0;
+belum commit/push/merge. OTA atas instruksi pengguna berhasil pada2026-10-20T10:07:55Z;
+controller Warehouse-9FC114 di192.168.1.28 melaporkan v0.7.0/build UTC2026-10-20T09:17:45Z.
+Mapping/warna35box, outputs75/75/75/75 dan Wi-Fi terjaga; driver ready, OTA tertutup,
+seluruh state padam, dashboard cocok source. Bukti di Test_Report.md dan _sandbox/ota-v070.
+PR#1 menuju develop tidak diubah oleh tugas ini.
+Jangan memakai develop sebagai baseline fitur. Jangan mengubah JARVIS atau mengakses perangkat
+tanpa instruksi lanjutan. IP/mapping diperiksa saat OTA tersebut; COM tidak diakses.
 
-```sh
-git clone --branch feature/warehouse-led-controller https://github.com/TaufikAS0/2026-esp32s3-warehouse-led.git
-cd 2026-esp32s3-warehouse-led
-git status -sb
-git log -3 --oneline
-```
+Mulai START_HERE.md, AGENTS.md, README.md, dokumen ini, Release_v0.7.0.md, Architecture,
+API, Build_Setup, Web_Operator_Guide, Test_Report dan pin map.
+THREAD_CONVERSATION.md berisi145pesan historis; instruksi terbaru pada release ini
+menggantikan prioritas manual lama, urutan config dan generator Rxx-Bxx.
 
-Baseline firmware sebelum handoff: commit `3eccf6798ad53ffc8bbf1d9abeb8f75294ab193e`, **v0.6.1**. Commit handoff sesudahnya hanya mengubah dokumentasi. PR #1 menuju develop: https://github.com/TaufikAS0/2026-esp32s3-warehouse-led/pull/1 . Jangan auto-merge atau push langsung ke main/develop.
+## Keputusan terbaru
 
-Baca START_HERE.md di root, AGENTS.md, README.md, dokumen ini, Architecture.md, API.md, Build_Setup.md, Web_Operator_Guide.md, Test_Report.md dan Pin_Map.md sebelum perubahan. [THREAD_CONVERSATION.md](THREAD_CONVERSATION.md) kini tersedia dalam Git sebagai ekspor pesan yang disamarkan sesuai permintaan pengguna 2026-10-20. Paket privat tetap memuat ekspor asli, akses perangkat dan snapshot aturan vault.
+- Satu S3, empat output WS2812B GPIO4–7;75LED/output,100box/300LED konfigurasi maksimum.
+- Generator A-01..A-25/output1, B/output2, C/output3, D/output4; label "-", cyan#4cd7f6.
+- Config lama/custom ID tidak diganti otomatis.
+- Lima profil ESP + JSON cadangan, tanpa jaringan/secret/runtime. Pilih untuk preview,
+  muat draft atau terapkan eksplisit. Apply memadamkan semua program/LED.
+- Semua tes/idle eksklusif satu rak bergantian. Urutan fisik output/start_led,
+  bukan nama atau urutan config. Perpindahan memadamkan rak lama terlebih dahulu.
+- Rainbow per posisi pixel; breathe warna config. Manual berikutnya membatalkan tes;
+  manual operasional biasa tetap bisa beberapa box sekaligus.
+- HTTP/web LAN terbuka. OTA tetap password perangkat/manual10menit/STA-only.
+- Popup box dan setting jumlah LED rak terpisah, warna config tetap terlihat saat padam.
+- Constructor NeoPixel berparameter75/pin/GRB800kHz wajib dipertahankan.
+- Config revision menolak write usang; draft tidak boleh hilang karena polling.
+- Metadata UTC/nonce, gate binary/partisi, manifest SHA256 wajib sebelum build diterima.
 
-## Tujuan dan keputusan pengguna
+## NVS dan build
 
-- Controller indikator lokasi gudang, bukan database stok/barang. Tidak mengubah source JARVIS aktif.
-- Satu ESP32-S3, empat output WS2812B, satu output per rak; GPIO 4, 5, 6, 7. Maksimum 75 LED/output, 100 box/300 LED. Cocokkan board/wiring sebelum upload.
-- ID stabil `R01-B01` sampai `R04-B25`; default tiga LED per box. Nomor web mulai 1, indeks internal mulai 0. Jumlah LED terpasang diatur manual, tidak dideteksi otomatis.
-- Mulai satu box/tiga LED. Mapping menolak ID duplikat, overlap dan rentang di luar LED terpasang. Konfigurasi disimpan hanya melalui Simpan, bukan setiap perintah LED.
-- Web dan HTTP API terbuka di LAN tanpa token/login, keputusan eksplisit pengguna. Token provisioning lama tidak lagi dipakai untuk HTTP. Jangan mengembalikan login tanpa permintaan.
-- OTA pada v0.6.1 tetap berpassword perangkat, default tertutup, diaktifkan manual selama 10 menit saat STA tersambung. Reboot menutup OTA dan memadamkan seluruh LED/program. Kebijakan robot lab tanpa password OTA bukan kebijakan otomatis controller gudang ini.
-- Password AP setup/pemulihan bersama `12345678`. Profil STA lab dan akses perangkat disertakan pada paket privat. Jangan mempublikasikan paket percakapan/credential ke GitHub.
+Key config_blob schema1 + wifi + revision (legacy string config read-only), credentials terpisah. Profil profile1..profile5
+format WLP1 CRC32 panjang eksplisit, maksimal8KiB/record. Tidak mengubah partisi:
+dua slot1280KiB, NVS128KiB@0x290000. Jangan erase/ubah layout untuk upgrade OTA.
+Build pinned core3.3.10/ArduinoJson7.4.2/NeoPixel1.15.2.
+Default UART/CH340 CDCOnBoot=default; native USB CDC memakai switch eksplisit.
+Sumber lab privat menghasilkan header ignored. Boot membandingkan HuaweiJIN/AP12345678,
+menulis hanya perbedaan, menjaga mapping/warna/secret OTA. Config rusak tidak ditimpa.
 
-## Fitur yang selesai
+## Aturan vault — baca berurutan
 
-Dashboard embedded tanpa CDN/filesystem upload: empat rak dengan 25 slot/rak; semua slot dapat diklik. Popup menyediakan mapping, label, warna tersimpan dan kontrol manual. Warna tersimpan ditampilkan meskipun box padam. Setting jumlah LED rak terpisah dari popup box.
+Vault terpisah: https://github.com/TaufikAS0/2026-vault-firmware-rules
 
-Kontrol per-box steady/blink, RGB, brightness dibatasi global, default timer 60 detik (1 detik–1 jam). Beberapa box bisa menyala bersamaan. Timer lokal tetap berjalan saat Wi-Fi putus. Respons HTTP bukan konfirmasi optik LED.
+1. 00_Start_Here/Firmware_AI_Vault_Home.md
+2. 01_Rules/Rules_Nama_dan_Folder_Workspace.md
+3. 01_Rules/Rules_Firmware_Standar.md
+4. 01_Rules/Rules_GitHub_Gitflow.md
+5. 01_Rules/Rules_Kredensial_WiFi.md
+6. 04_Profiles/WiFi/WiFi_HuaweiJIN.md
+7. 01_Rules/Rules_Versioning.md
+8. 01_Rules/Rules_Change_Notifications.md
 
-Tes hardware per rak mengikuti jumlah LED terpasang, termasuk area tanpa mapping. Program otomatis running, blink bergilir, rainbow dan breathe; mode tes bertimer atau idle kontinu di RAM. Perintah manual aktif mendapat prioritas; hardware test menimpa output terkait. Stop program mempertahankan perintah manual; all-off/config/OTA/reboot menghentikan program. Idle tidak otomatis hidup lagi setelah reboot.
+Jangan cetak/commit credential. Timestamp build bukan uptime/jam perangkat/upload.
+Laporan perubahan wajib versi sebelum/sesudah, UTC, API/pin/NVS/jaringan, tes dan status upload.
 
-API utama: GET status/boxes/config, PUT config, PUT boxes/{id}/state, POST all-off; semuanya di `/api/v1`. Program memakai PUT `/api/v1/program`. Baca API.md untuk kontrak lengkap. Client Python memakai timeout dan tidak mengulang perintah nyala otomatis setelah timeout.
+## Batas bukti
 
-v0.6.1 memperbaiki status web setelah timeout: GET 10 detik, mutation 5 detik tanpa retry; polling dilewati saat UI sibuk; alarm lama dibersihkan saat status pulih.
-
-## Bug penting yang jangan diulang
-
-NeoPixel 1.15.2 ESP32/IDF5: constructor kosong lalu setPin/updateType/updateLength/begin tidak menginisialisasi shared RMT mutex. API tampak sukses tetapi semua LED padam. Driver kini menggunakan constructor berparameter untuk empat strip, masing-masing 75 LED, GRB/800 kHz. Jangan mengganti kembali ke constructor kosong. Tes driver menautkan implementasi NeoPixel asli dengan shim batas hardware.
-
-## Build dan batas bukti
-
-- Versi tunggal `02_Firmware/WarehouseLed/firmware_version.h` = v0.6.1.
-- Pinned: Arduino-ESP32 3.3.10, ArduinoJson 7.4.2, Adafruit NeoPixel 1.15.2.
-- Perangkat terakhir: ESP32-S3 rev0.2, USB-UART CH340; board dilaporkan flash16MB/PSRAM8MB, tetapi profil yang teruji menggunakan flash4MB, PSRAM disabled, USB hwcdc, **CDCOnBoot=default (disabled)**. Port COM lama bukan jaminan port laptop baru.
-- Build terakhir yang di-upload memakai FQBN `esp32:esp32:esp32s3:FlashSize=4M,PartitionScheme=default,PSRAM=disabled,USBMode=hwcdc,CDCOnBoot=default`. Script build.ps1 lama memakai CDCOnBoot=cdc; jangan menyamakan dua profil itu. Cocokkan profil sebelum build berikutnya.
-- Partition sketch: dua slot aplikasi 1280 KiB, NVS 128 KiB pada 0x290000. OTA hanya mengganti aplikasi; jangan erase flash atau mengubah partition table untuk migrasi biasa.
-- Hasil historis v0.6.1: flash1064217/1310720, static RAM61500/327680. Build ini mendahului aturan timestamp build 2026-10-12; **tidak memiliki identitas build UTC/gate/manifest yang diwajibkan aturan baru**. Jangan mengarang timestamp dari waktu file/upload.
-- Host: 11 tes Python, domain, codec, driver NeoPixel, animasi dan DOM UI lulus pada sesi sebelumnya. Hardware HTTP empat program, timer, prioritas, brightness clamp, invalid input lulus. OTA berpassword berhasil, kembali STA, mapping/warna terjaga, OTA tertutup, LED padam saat reboot.
-- Pengguna mengonfirmasi tiga LED GPIO4 menyala pada v0.5.1. Mapping kemudian menjadi 25 box/75 LED rak1; B02 biru tersimpan melewati reboot. Pengguna bisa mengubah konfigurasi sewaktu-waktu: baca kondisi aktual sebelum menulis.
-- Belum terbukti: seluruh pola secara optik, 75/300 LED dan empat output serentak, distribusi daya, tegangan ujung, suhu kabel, router recovery penuh dan endurance delapan jam. Ini baseline lab, bukan sertifikasi gudang.
-
-Tidak ada build/upload baru dalam tugas handoff 2026-10-20. Versi sebelum/sesudah tetap v0.6.1; API/pin/NVS/perilaku tidak diubah. Status firmware perangkat hari ini tidak ditentukan hanya dari source Git.
-
-## Aturan baru yang wajib diterapkan sebelum perubahan firmware berikutnya
-
-Vault rules terpisah: https://github.com/TaufikAS0/2026-vault-firmware-rules (aksesnya terpisah dari repository public ini; snapshot aturan ada dalam paket privat).
-
-Baca penuh, berurutan:
-1. `00_Start_Here/Firmware_AI_Vault_Home.md`
-2. `01_Rules/Rules_Nama_dan_Folder_Workspace.md`
-3. `01_Rules/Rules_Firmware_Standar.md`
-4. `01_Rules/Rules_GitHub_Gitflow.md`
-5. `01_Rules/Rules_Kredensial_WiFi.md`
-6. `04_Profiles/WiFi/WiFi_HuaweiJIN.md`
-7. `01_Rules/Rules_Versioning.md`
-8. `01_Rules/Rules_Change_Notifications.md`
-
-Aturan versi/notifikasi baru membutuhkan metadata UTC yang dibuat ulang saat build, satu header generated bersama, gate metadata versi/timestamp dalam binary, manifest SHA-256, tampilan serial/API/dashboard, dan laporan perubahan. Implementasikan sebelum build/upload firmware baru; jangan menganggap baseline lama sudah patuh.
-
-Profil lab wajib STA HuaweiJIN dan AP default12345678. Pada v0.6.1 jaringan tersimpan dalam record JSON key `config` namespace `warehouse`; credentials AP/token/OTA berada pada record `credentials`. Mengganti default source tidak otomatis mengganti NVS. Saat migrasi berikutnya, ubah hanya nilai jaringan yang diperlukan saat berbeda dan pertahankan mapping/warna/secret OTA. Jangan menerapkan penghapusan key robot lain ke schema ini.
-
-## Instruksi singkat untuk AI di laptop baru
-
-> Lanjutkan controller gudang dari feature/warehouse-led-controller, bukan develop. Baca 04_Dokumen/AI_Handoff.md dan seluruh aturan vault dalam paket privat terlebih dahulu. Gunakan percakapan sebagai konteks historis; keputusan terbaru menggantikan rencana awal yang menyebut API token. Audit Git dan perangkat sebelum perubahan. Pertahankan web/API LAN terbuka, popup box, setting rak terpisah, warna tersimpan dan program idle. Baca credential perangkat dari paket lokal privat jika perlu OTA; jangan cetak atau commit credential. Terapkan aturan metadata build baru sebelum build firmware berikutnya. Jangan mengklaim tes fisik dari respons HTTP. Jangan auto-merge PR atau mengubah source JARVIS.
-
-START_HERE.md dan THREAD_CONVERSATION.md versi public dapat dibaca AI tujuan langsung setelah clone branch fitur; ZIP privat tidak diperlukan untuk analisis source. Paket privat adalah ekspor konteks, bukan impor sesi otomatis ke produk AI lain; JSONL hanya memuat pesan yang tersedia, bukan reasoning internal. Autentikasi GitHub untuk push dilakukan sendiri di laptop baru, bukan menyalin token akun dari komputer asal.
-
-Publikasi transcript ini hanya mengubah dokumentasi. Delapan file aturan di atas, termasuk Rules_Versioning.md dan Rules_Change_Notifications.md, dibaca kembali sebelum push. Profil yang dicatat tetap STA HuaweiJIN / AP12345678; tidak ada perubahan konfigurasi NVS, build, upload atau versi firmware (v0.6.1 tetap).
+Lihat Test_Report.md. Bukti historis hanya pengguna mengonfirmasi3LED GPIO4 pada v0.5.1,
+dan tes software/API/OTA v0.6.1. Runtime v0.7.0 kini terverifikasi melalui OTA/identitas/API,
+tanpa pengamatan optik LED.
+75LED, kelistrikan, semua pola optik, router recovery penuh dan endurance memerlukan tes nyata.
+Tes host v0.7.0 dilakukan lokal; OTA nyata terverifikasi terpisah, tidak memulai tes LED.
