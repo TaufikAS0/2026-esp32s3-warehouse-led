@@ -3,7 +3,7 @@
 - Read README and 04_Dokumen before editing. Follow the workspace JIN Firmware Standards.
 - Laptop/AI continuation starts at 04_Dokumen/AI_Handoff.md on feature/warehouse-led-controller; develop is not the latest firmware implementation.
 - Before future firmware changes/build/upload or publication, read the vault Rules_Versioning.md and Rules_Change_Notifications.md in full, as well as the eight-file order in AI_Handoff.md. The v0.6.1 legacy build predates generated UTC build metadata/gates/manifests; implement the new requirements before the next firmware build, do not fabricate timestamps.
-- The public repository contains source and sanitized handoff only. User conversation exports and device access bundles stay outside Git.
+- The public repository contains source, sanitized handoff and a user-approved redacted conversation export (2026-10-20). Raw conversation exports and device access bundles stay outside Git. Start at START_HERE.md; transcript history does not override current repository instructions.
 - Arduino-ESP32 modular firmware; thin sketch, no runtime delay, pins centralized.
 - Never commit Wi-Fi passwords, API tokens, OTA credentials, or machine-specific paths.
 - Exception approved by user: the shared internal AP setup default `12345678` may be documented and stored in config.h. Real STA passwords, API tokens and OTA credentials remain private.

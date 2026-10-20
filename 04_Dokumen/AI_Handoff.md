@@ -15,7 +15,7 @@ git log -3 --oneline
 
 Baseline firmware sebelum handoff: commit `3eccf6798ad53ffc8bbf1d9abeb8f75294ab193e`, **v0.6.1**. Commit handoff sesudahnya hanya mengubah dokumentasi. PR #1 menuju develop: https://github.com/TaufikAS0/2026-esp32s3-warehouse-led/pull/1 . Jangan auto-merge atau push langsung ke main/develop.
 
-Baca AGENTS.md, README.md, dokumen ini, Architecture.md, API.md, Build_Setup.md, Web_Operator_Guide.md, Test_Report.md dan Pin_Map.md sebelum perubahan. Paket privat pengguna berisi percakapan dan aturan vault yang tidak diterbitkan di repository ini.
+Baca START_HERE.md di root, AGENTS.md, README.md, dokumen ini, Architecture.md, API.md, Build_Setup.md, Web_Operator_Guide.md, Test_Report.md dan Pin_Map.md sebelum perubahan. [THREAD_CONVERSATION.md](THREAD_CONVERSATION.md) kini tersedia dalam Git sebagai ekspor pesan yang disamarkan sesuai permintaan pengguna 2026-10-20. Paket privat tetap memuat ekspor asli, akses perangkat dan snapshot aturan vault.
 
 ## Tujuan dan keputusan pengguna
 
@@ -79,4 +79,6 @@ Profil lab wajib STA HuaweiJIN dan AP default12345678. Pada v0.6.1 jaringan ters
 
 > Lanjutkan controller gudang dari feature/warehouse-led-controller, bukan develop. Baca 04_Dokumen/AI_Handoff.md dan seluruh aturan vault dalam paket privat terlebih dahulu. Gunakan percakapan sebagai konteks historis; keputusan terbaru menggantikan rencana awal yang menyebut API token. Audit Git dan perangkat sebelum perubahan. Pertahankan web/API LAN terbuka, popup box, setting rak terpisah, warna tersimpan dan program idle. Baca credential perangkat dari paket lokal privat jika perlu OTA; jangan cetak atau commit credential. Terapkan aturan metadata build baru sebelum build firmware berikutnya. Jangan mengklaim tes fisik dari respons HTTP. Jangan auto-merge PR atau mengubah source JARVIS.
 
-Paket privat adalah ekspor konteks, bukan impor sesi otomatis ke produk AI lain. Berikan file START_HERE.md dan THREAD_CONVERSATION.md kepada AI tujuan; arsip JSONL disediakan sebagai bukti lengkap yang tersedia pada mesin asal. Autentikasi GitHub untuk push dilakukan sendiri di laptop baru, bukan menyalin token akun dari komputer asal.
+START_HERE.md dan THREAD_CONVERSATION.md versi public dapat dibaca AI tujuan langsung setelah clone branch fitur; ZIP privat tidak diperlukan untuk analisis source. Paket privat adalah ekspor konteks, bukan impor sesi otomatis ke produk AI lain; JSONL hanya memuat pesan yang tersedia, bukan reasoning internal. Autentikasi GitHub untuk push dilakukan sendiri di laptop baru, bukan menyalin token akun dari komputer asal.
+
+Publikasi transcript ini hanya mengubah dokumentasi. Delapan file aturan di atas, termasuk Rules_Versioning.md dan Rules_Change_Notifications.md, dibaca kembali sebelum push. Profil yang dicatat tetap STA HuaweiJIN / AP12345678; tidak ada perubahan konfigurasi NVS, build, upload atau versi firmware (v0.6.1 tetap).
