@@ -1,6 +1,6 @@
-# Persiapan GitHub private
+# Publikasi GitHub
 
-Target: `TaufikAS0/2026-esp32s3-warehouse-led`, private. Integration branch adalah develop; implementasi berada di feature/warehouse-led-controller dan dipublikasikan melalui PR ke develop. main dicadangkan untuk release produksi setelah acceptance hardware.
+Target: `TaufikAS0/2026-esp32s3-warehouse-led`, public atas permintaan pengguna 2026-10-20. Integration branch adalah develop; implementasi berada di feature/warehouse-led-controller dan dipublikasikan melalui PR ke develop. main dicadangkan untuk release produksi setelah acceptance hardware. Baca [AI_Handoff.md](AI_Handoff.md) untuk melanjutkan pada laptop lain. Riwayat percakapan dan credential perangkat berada di paket privat terpisah.
 
 ## Goal
 
@@ -32,4 +32,4 @@ Initial develop publication establishes the minimal integration baseline; featur
 
 ## Risks / notes
 
-Before publication review staged files, test results, private visibility, and absence of real tokens/passwords, binary/caches, personal paths, and copied baseline secrets. Physical testing remains open: label the PR as software implementation, not a certified warehouse release. If branch protection is unavailable, enforce review through process.
+Before publication review staged files, test results, intended visibility, and absence of real tokens/passwords, binary/caches, personal paths, and copied baseline secrets. Before changing visibility audit all published Git refs/history and GitHub PR/issues/releases/artifacts, not only HEAD. Physical testing remains open: label the PR as software implementation, not a certified warehouse release. If branch protection is unavailable, enforce review through process.

@@ -27,7 +27,7 @@ Klik box membuka popup mapping, warna konfigurasi tersimpan dan kontrol manual. 
 
 Versi source tunggal: `firmware_version.h`. Dependency dipin: core 3.3.10, ArduinoJson 7.4.2, Adafruit NeoPixel 1.15.2. Partition table sketch menyediakan dua slot OTA dan NVS128 KiB. Tidak memakai sensor/backend solar atau filesystem web terpisah.
 
-Repository target private `TaufikAS0/2026-esp32s3-warehouse-led`. Branch fitur `feature/warehouse-led-controller` berasal dari `develop`. `main` dicadangkan untuk rilis produksi pertama; tidak ada push langsung ke main. Lihat [Publishing](04_Dokumen/Publishing.md).
+Repository public `TaufikAS0/2026-esp32s3-warehouse-led` atas permintaan pengguna untuk melanjutkan lintas laptop/AI. **Clone branch `feature/warehouse-led-controller` untuk firmware terbaru**; default `develop` masih baseline integration. Branch fitur berasal dari `develop`. `main` dicadangkan untuk rilis produksi pertama; tidak ada push langsung ke main. Lihat [handoff AI/laptop baru](04_Dokumen/AI_Handoff.md) dan [Publishing](04_Dokumen/Publishing.md). Percakapan lengkap dan akses perangkat disediakan dalam paket lokal privat, bukan repository public.
 
 ## Verifikasi
 
